@@ -1882,7 +1882,255 @@ a {
 .google-login-container > div:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-hover) !important; 
-  
-  
   border-color: rgba(248, 113, 113, 0.5) !important; 
+}
+
+/* ===
+   APPEND THIS TO THE BOTTOM OF YOUR src/styles.css FILE
+=== */
+
+/* === 20. ALL CASES PAGE STYLES === */
+.all-cases-container {
+  width: 100%;
+}
+
+.all-cases-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.all-cases-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.75rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+.all-cases-actions {
+  display: flex;
+  gap: 1rem;
+}
+.all-cases-actions .btn {
+  width: auto; /* Allow button to size to content */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 0 0.75rem;
+}
+.search-bar svg {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+.search-bar input {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  padding: 0.75rem;
+  width: 250px;
+}
+.search-bar input::placeholder {
+  color: var(--text-secondary);
+}
+
+/* --- Table Styles --- */
+.table-container {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  overflow: hidden; /* Ensures radius is respected */
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+table th,
+table td {
+  padding: 1.25rem 1.5rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+table th {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-primary); /* Slightly darker header */
+}
+table td {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+table td strong {
+  font-weight: 600;
+}
+table tbody tr:last-child td {
+  border-bottom: none;
+}
+table tbody tr:hover {
+  background: var(--bg-primary);
+}
+table td .btn-small {
+  /* Make button smaller and more subtle */
+  padding: 4px 12px;
+  font-size: 0.85rem;
+  background: var(--bg-tertiary);
+}
+table td .btn-small:hover {
+  background: var(--bg-primary);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.no-results {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+/* ===
+   APPEND THIS TO THE BOTTOM OF YOUR src/styles.css FILE
+=== */
+
+/* === 21. GLOBAL SEARCH PAGE STYLES === */
+.search-page-container {
+  width: 100%;
+}
+
+.global-search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 0.5rem 0.75rem 0.5rem 1.25rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.global-search-bar .search-icon-large {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+}
+.global-search-bar input {
+  flex-grow: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1rem;
+  padding: 0.75rem 1rem;
+}
+.global-search-bar input::placeholder {
+  color: var(--text-secondary);
+}
+.global-search-bar .btn {
+  width: auto;
+  font-size: 0.95rem;
+}
+
+.search-suggestions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0 0.25rem;
+}
+.search-suggestions span {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.search-suggestions button {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.search-suggestions button:hover {
+  background: var(--primary-color);
+  color: #FFF;
+}
+
+/* --- Search Results --- */
+.search-results-container {
+  margin-top: 2.5rem;
+}
+.search-results-container h3 {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.loading-text {
+  color: var(--text-secondary);
+  font-size: 1rem;
+}
+
+.result-snippet-card {
+  display: flex;
+  gap: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+.result-snippet-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-hover);
+}
+.result-icon {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+  margin-top: 4px;
+}
+.result-content {
+  display: flex;
+  flex-direction: column;
+}
+.result-title {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-decoration: none;
+}
+.result-title:hover {
+  text-decoration: underline;
+  color: var(--primary-color);
+}
+.result-title strong {
+  font-weight: 600;
+}
+.result-source {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.result-snippet {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.result-snippet strong {
+  color: var(--text-primary); /* Highlight the matched term */
+  background: var(--bg-tertiary);
+  padding: 2px 0;
 }
