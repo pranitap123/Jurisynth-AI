@@ -23,6 +23,7 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/cases", require("./routes/caseRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
 app.use("/uploads", express.static("uploads"));
+app.use("/api/summary", require("./routes/summaryRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Jurisynth Backend Running");
