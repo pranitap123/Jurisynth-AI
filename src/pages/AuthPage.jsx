@@ -1,229 +1,244 @@
 import React, { useState } from 'react';
-import { FaUser, FaGavel, FaEnvelope, FaLock } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
-// 1. Import the Google Login button and jwt-decode
+import { useNavigate } from 'react-router-dom';
+import { FaScaleBalanced, FaArrowRight } from 'react-icons/fa6';
 import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
 
 function AuthPage() {
-  const [isLoginMode, setIsLoginMode] = useState(true);
-  const [userType, setUserType] = useState('user');
+  const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
 
-  // State for form fields
+  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState('advocate'); // Matches backend enum perfectly
 
-  // 2. Add the Google Login success handler
-  const handleGoogleSuccess = (credentialResponse) => {
-    console.log(credentialResponse);
-    // Decode the credential to get user's name and email
-    const decoded = jwtDecode(credentialResponse.credential);
-    const userName = decoded.name;
-    const userEmail = decoded.email;
+  // UI State
+  const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null); 
+  const [isLoading, setIsLoading] = useState(false);
 
-    console.log("Google Login Success!");
-    console.log("Name:", userName);
-    console.log("Email:", userEmail);
+  // Backend URL - Absolute path required for Electron
+  const API_URL = 'http://localhost:5000/api/auth';
 
-    // Save the user's name to Local Storage
-    localStorage.setItem('loggedInUserName', userName);
-
-    // TODO: Send this 'credentialResponse.credential' to your backend for verification
-
-    alert(`Welcome, ${userName}! You are logged in.`);
-    navigate('/dashboard'); // Redirect to dashboard
-  };
-
-  const handleGoogleError = () => {
-    console.log('Login Failed');
-    alert('Google Login failed. Please try again.');
-  };
-
-  const handleLogin = (e) => {
+  // --- STANDARD EMAIL/PASSWORD SUBMIT ---
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // For testing, we'll just use the email as the name if it's not a full name
-    // In a real app, your API would return the user's full name
-    const loggedInName = email.split('@')[0]; // Simple name from email
-    localStorage.setItem('loggedInUserName', loggedInName);
-    
-    alert('Login successful! Redirecting to dashboard...');
-    navigate('/dashboard');
+    setError(null);
+    setSuccessMsg(null);
+    setIsLoading(true);
+
+    const endpoint = isLogin ? `${API_URL}/login` : `${API_URL}/register`;
+    const payload = isLogin 
+      ? { email, password } 
+      : { name, email, password, role };
+
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // This catches your backend Zod errors or invalid credentials
+        throw new Error(data.message || 'Authentication failed');
+      }
+
+      if (!isLogin) {
+        // REGISTRATION SUCCESS FLOW
+        setIsLogin(true); 
+        setSuccessMsg('Account created successfully! Please log in.');
+        setPassword(''); // Clear password for security
+      } else {
+        // LOGIN SUCCESS FLOW
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('loggedInUserName', data.name);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userId', data._id);
+        
+        navigate('/dashboard'); 
+      }
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    localStorage.setItem('loggedInUserName', name); // Save the full name
-    alert('Registration successful! Redirecting to dashboard...');
-    navigate('/dashboard');
-  };
-
-  // Helper to switch modes and clear form fields
-  const toggleMode = () => {
-    setIsLoginMode(!isLoginMode);
-    setName('');
-    setEmail('');
-    setPassword('');
+  // --- GOOGLE AUTHENTICATION HANDLER ---
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError(null);
+    try {
+      const response = await fetch(`${API_URL}/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('loggedInUserName', data.name);
+        localStorage.setItem('userRole', data.role);
+        localStorage.setItem('userId', data._id);
+        navigate('/dashboard');
+      } else {
+        setError(data.message || 'Google Auth Failed on Backend');
+      }
+    } catch (err) {
+      setError('Network error during Google login');
+    }
   };
 
   return (
     <div className="auth-page-layout">
-      {/* Left Branding Panel */}
+      {/* --- Left Side: Branding Panel --- */}
       <div className="auth-branding-panel">
-        <Link to="/" className="branding-logo">
+        <a href="/" className="branding-logo">
+          <FaScaleBalanced style={{ color: 'var(--primary-color)', marginRight: '10px' }} />
           Jurisynth
-        </Link>
+        </a>
         <div className="branding-content">
-          <div className="branding-icon">
-            <FaGavel />
-          </div>
-          <h2>A Smarter Way to Practice Law</h2>
+          <FaScaleBalanced className="branding-icon" />
+          <h2>The AI advantage for modern legal teams.</h2>
           <p>
-            Turn thousands of pages of case documents into searchable,
-            summarized, and actionable insights in minutes.
+            Join thousands of legal professionals automating summaries, tracking 
+            contradictions, and organizing cases securely.
           </p>
         </div>
-        <div>{/* Empty div for bottom spacing */}</div>
       </div>
 
-      {/* Right Form Panel */}
+      {/* --- Right Side: Form Panel --- */}
       <div className="auth-form-panel">
-        <div className="auth-card animate-fade-in-up">
-          <h2>{isLoginMode ? 'Welcome Back' : 'Create Your Account'}</h2>
+        <div className="auth-card">
+          <h2>{isLogin ? 'Welcome back' : 'Create an account'}</h2>
           
-          {/* 3. Add the Google Login Button here */}
-          <div className="google-login-container">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="outline" // Use 'filled_blue' or 'outline'
+          {/* Display Backend Errors (including Zod validation) Here */}
+          {error && (
+            <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '10px', borderRadius: '8px', margin: '0 0 15px 0', fontSize: '0.9rem', textAlign: 'center' }}>
+              {error}
+            </div>
+          )}
+
+          {/* Display Registration Success Message Here */}
+          {successMsg && (
+            <div style={{ color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '8px', margin: '0 0 15px 0', fontSize: '0.9rem', textAlign: 'center' }}>
+              {successMsg}
+            </div>
+          )}
+
+          <div className="google-login-container" style={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin 
+              onSuccess={handleGoogleSuccess} 
+              onError={() => setError('Google widget failed to load or user closed popup.')} 
+              theme="outline"
               size="large"
-              shape="rectangular"
-              width="100%" // Make it fill the container
+              text="continue_with"
             />
           </div>
-          
+
           <div className="auth-divider">
-            <span>OR</span>
+            <span>OR EMAIL</span>
           </div>
 
-          {isLoginMode ? (
-            /* === LOGIN FORM === */
-            <form className="auth-form" onSubmit={handleLogin}>
-              <div className="form-group">
-                <label htmlFor="login-email">
-                  <FaEnvelope /> Email
-                </label>
-                <input
-                  type="email"
-                  id="login-email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="login-password">
-                  <FaLock /> Password
-                </label>
-                <input
-                  type="password"
-                  id="login-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Link to="/forgot-password" className="forgot-password">
-                Forgot Password?
-              </Link>
-              <button type="submit" className="btn btn-primary">
-                Login
-              </button>
-              <p className="auth-toggle">
-                Don't have an account?{' '}
-                <button type="button" onClick={toggleMode}>
-                  Register
-                </button>
-              </p>
-            </form>
-          ) : (
-            /* === REGISTER FORM === */
-            <form className="auth-form" onSubmit={handleRegister}>
-              <div className="form-group">
-                <label htmlFor="register-name">
-                  <FaUser /> Full Name
-                </label>
-                <input
-                  type="text"
-                  id="register-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="register-email">
-                  <FaEnvelope /> Email
-                </label>
-                <input
-                  type="email"
-                  id="register-email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="register-password">
-                  <FaLock /> Password
-                </label>
-                <input
-                  type="password"
-                  id="register-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            {!isLogin && (
+              <>
+                <div className="form-group">
+                  <label>I am a:</label>
+                  <div className="user-type-toggle">
+                    <label className={role === 'advocate' ? 'active' : ''}>
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        value="advocate" 
+                        checked={role === 'advocate'}
+                        onChange={(e) => setRole(e.target.value)}
+                      />
+                      Lawyer
+                    </label>
+                    <label className={role === 'user' ? 'active' : ''}>
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        value="user" 
+                        checked={role === 'user'}
+                        onChange={(e) => setRole(e.target.value)}
+                      />
+                      Client
+                    </label>
+                  </div>
+                </div>
 
-              {/* User Type Toggle */}
-              <label className="auth-label">I am a:</label>
-              <div className="user-type-toggle">
-                <label className={userType === 'user' ? 'active' : ''}>
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="user"
-                    checked={userType === 'user'}
-                    onChange={() => setUserType('user')}
+                <div className="form-group">
+                  <label htmlFor="name">Full Name</label>
+                  <input 
+                    type="text" 
+                    id="name" 
+                    placeholder="Jane Doe" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required 
                   />
-                  <FaUser /> User
-                </label>
-                <label className={userType === 'advocate' ? 'active' : ''}>
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="advocate"
-                    checked={userType === 'advocate'}
-                    onChange={() => setUserType('advocate')}
-                  />
-                  <FaGavel /> Advocate
-                </label>
-              </div>
+                </div>
+              </>
+            )}
 
-              <button type="submit" className="btn btn-primary">
-                Create Account
+            <div className="form-group">
+              <label htmlFor="email">Work Email</label>
+              <input 
+                type="email" 
+                id="email" 
+                placeholder="name@firm.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required 
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input 
+                type="password" 
+                id="password" 
+                placeholder="••••••••" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required 
+              />
+            </div>
+
+            {isLogin && (
+              <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+                 <a href="#" className="forgot-password" style={{ display: 'inline-block', margin: 0 }}>Forgot password?</a>
+              </div>
+            )}
+
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
+              {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+              {!isLoading && <FaArrowRight style={{ marginLeft: '8px' }} />}
+            </button>
+          </form>
+
+          <div className="auth-toggle">
+            <p>
+              {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+              <button type="button" onClick={() => {
+                setIsLogin(!isLogin);
+                setError(null); 
+                setSuccessMsg(null); 
+              }}>
+                {isLogin ? 'Sign up' : 'Log in'}
               </button>
-              <p className="auth-toggle">
-                Already have an account?{' '}
-                <button type="button" onClick={toggleMode}>
-                  Login
-                </button>
-              </p>
-            </form>
-          )}
+            </p>
+          </div>
         </div>
       </div>
     </div>

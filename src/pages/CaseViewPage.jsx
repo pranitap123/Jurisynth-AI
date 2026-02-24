@@ -1,79 +1,145 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { FaFilePdf, FaMicrophoneAlt, FaExclamationTriangle, FaArrowLeft } from 'react-icons/fa';
-
-// Mock data for the demo. Later, you'll fetch this based on the caseId.
-const caseData = {
-  '2025-081': {
-    name: 'ABC v. XYZ Corp',
-    summary: 'A contract dispute regarding the non-delivery of specified goods (Model X-1000) by XYZ Corp. on the agreed-upon date (Oct 15, 2024). Plaintiff (ABC) alleges breach of contract and seeks damages. Defendant (XYZ Corp.) claims unforeseen supply chain disruptions as a "Force Majeure" event.',
-    keyFacts: [
-      'Contract signed: July 1, 2024.',
-      'Delivery date: October 15, 2024.',
-      'Defendant sent notification of delay: October 14, 2024.',
-      'Plaintiff claims $1.2M in damages from operational downtime.'
-    ],
-    plaintiffArgs: [
-      'Defendant failed to provide adequate warning of delay.',
-      '"Force Majeure" clause does not cover standard supply chain issues.'
-    ],
-    defendantArgs: [
-      'A global shipping container shortage constitutes a valid Force Majeure event.',
-      'Notification was provided as soon as the delay was confirmed.'
-    ],
-    evidence: [
-      { id: 1, type: 'pdf', title: 'Original Contract', source: 'Doc-001.pdf' },
-      { id: 2, type: 'audio', title: 'Witness Testimony (J. Doe)', source: 'Audio-001.mp3' },
-      { id: 3, type: 'pdf', title: 'Email Correspondence', source: 'Doc-002.pdf' }
-    ],
-    contradictions: [
-      { id: 1, text: 'Witness J. Doe stated delivery was "expected in September" (Audio-001, 04:15), contradicting the contract\'s October 15 date (Doc-001, Sec 2.a).' }
-    ]
-  },
-  '2025-079': {
-    name: 'Johnson Property Dispute',
-    summary: 'A dispute over property line boundaries and a shared driveway. Plaintiff (Johnson) alleges encroachment by the defendant. Defendant claims "adverse possession" of the disputed strip of land for over 12 years.',
-    keyFacts: [
-      'Property survey (2005) shows line in favor of Plaintiff.',
-      'Defendant built a fence in 2010, allegedly 3 feet onto Plaintiff\'s property.',
-      'Local statute for adverse possession is 10 years.'
-    ],
-    plaintiffArgs: [
-      'The 2005 survey is the definitive legal boundary.',
-      'Defendant\'s fence is a clear and knowing encroachment.'
-    ],
-    defendantArgs: [
-      'Fence has been in place, unchallenged, for 14 years (2010-2024).',
-      'Plaintiff was aware of the fence and did not contest it until now.'
-    ],
-    evidence: [
-      { id: 1, type: 'pdf', title: '2005 Property Survey', source: 'Doc-A.pdf' },
-      { id: 2, type: 'pdf', title: 'Defendant Fence Receipt (2010)', source: 'Doc-B.pdf' },
-    ],
-    contradictions: []
-  }
-};
-
-const notFoundData = {
-  name: "Case Not Found",
-  summary: "The details for this case could not be retrieved. Please check the case ID and try again.",
-  keyFacts: [],
-  plaintiffArgs: [],
-  defendantArgs: [],
-  evidence: [],
-  contradictions: []
-};
-
+import { FaFilePdf, FaMicrophoneAlt, FaExclamationTriangle, FaArrowLeft, FaUpload, FaTimes } from 'react-icons/fa';
 
 function CaseViewPage() {
   const { caseId } = useParams(); 
-  
-  const caseDetails = caseData[caseId] || notFoundData;
+  const [caseDetails, setCaseDetails] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // --- Upload State ---
+  const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState({ type: '', message: '' });
 
   const userName = localStorage.getItem('loggedInUserName') || 'Guest';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase() || 'G';
 
+  const fetchCaseData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch case details');
+      }
+
+      setCaseDetails(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCaseData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caseId]);
+
+  // --- Upload Handlers ---
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+      setUploadStatus({ type: '', message: '' }); // Clear previous messages
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
+  };
+
+  const cancelSelection = () => {
+    setSelectedFile(null);
+    setUploadStatus({ type: '', message: '' });
+    if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setUploadStatus({ type: '', message: '' });
+
+    const formData = new FormData();
+    // 'document' is the field name your backend multer setup will likely expect. 
+    formData.append('document', selectedFile); 
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      // IMPORTANT: Notice we DO NOT set 'Content-Type' here. 
+      // When using FormData, the browser automatically sets it to 'multipart/form-data' with the correct boundary.
+      const response = await fetch(`http://localhost:5000/api/cases/${caseId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Upload failed');
+      }
+
+      setUploadStatus({ type: 'success', message: 'Document uploaded successfully!' });
+      setSelectedFile(null); // Reset selection
+      
+      // Refetch the case data so the new document appears in the list
+      fetchCaseData(); 
+
+    } catch (err) {
+      setUploadStatus({ type: 'error', message: err.message });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // --- Render Loading State ---
+  if (isLoading) {
+    return (
+      <DashboardLayout userName={userName} userInitials={userInitials}>
+        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          Loading case details...
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // --- Render Error State ---
+  if (error || !caseDetails) {
+    return (
+      <DashboardLayout userName={userName} userInitials={userInitials}>
+        <div className="case-view-container">
+          <div className="case-view-header">
+            <Link to="/dashboard" className="back-button">
+              <FaArrowLeft /> Back to Dashboard
+            </Link>
+            <h1>Case Not Found</h1>
+          </div>
+          <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '15px', borderRadius: '8px' }}>
+            {error || "The details for this case could not be retrieved. Please check the ID."}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // --- Render Actual Case Data ---
   return (
     <DashboardLayout userName={userName} userInitials={userInitials}>
       <div className="case-view-container">
@@ -81,75 +147,113 @@ function CaseViewPage() {
           <Link to="/dashboard" className="back-button">
             <FaArrowLeft /> Back to Dashboard
           </Link>
-          <h1>{caseDetails.name}</h1>
-          <span className="case-id">Case #{caseId}</span>
+          <h1>{caseDetails.title}</h1>
+          <span className="case-id">Case #{caseDetails.caseNumber}</span>
         </div>
 
-        {/* This is the div that was broken. The '==' are gone. */}
         <div className="case-view-layout">
+          {/* --- Left Column: Summary --- */}
           <div className="summary-content">
             <div className="summary-card">
-              <h3>Executive Summary</h3>
-              <p>{caseDetails.summary}</p>
+              <h3>Description</h3>
+              <p>{caseDetails.description || 'No description provided for this case.'}</p>
             </div>
             
-            {caseDetails.keyFacts.length > 0 && (
-              <div className="summary-card">
-                <h3>Key Facts</h3>
-                <ul>
-                  {caseDetails.keyFacts.map((fact, index) => <li key={index}>{fact}</li>)}
-                </ul>
-              </div>
-            )}
+            {/* These are placeholders until we build the AI extraction features */}
+            <div className="summary-card" style={{ opacity: 0.5 }}>
+              <h3>Key Facts (AI Generated)</h3>
+              <p>Upload documents to automatically generate key facts.</p>
+            </div>
 
-            {caseDetails.plaintiffArgs.length > 0 && (
-              <div className="summary-card-grid">
-                <div className="summary-card">
-                  <h3>Plaintiff's Arguments</h3>
-                  <ul>
-                    {caseDetails.plaintiffArgs.map((arg, index) => <li key={index}>{arg}</li>)}
-                  </ul>
-                </div>
-                <div className="summary-card">
-                  <h3>Defendant's Arguments</h3>
-                  <ul>
-                    {caseDetails.defendantArgs.map((arg, index) => <li key={index}>{arg}</li>)}
-                  </ul>
-                </div>
+            <div className="summary-card-grid" style={{ opacity: 0.5 }}>
+              <div className="summary-card">
+                <h3>Plaintiff's Arguments</h3>
+                <p>Pending document analysis...</p>
               </div>
-            )}
+              <div className="summary-card">
+                <h3>Defendant's Arguments</h3>
+                <p>Pending document analysis...</p>
+              </div>
+            </div>
           </div>
 
-          {/* --- Right Column: Evidence & Contradictions --- */}
+          {/* --- Right Column: Evidence & Uploads --- */}
           <div className="evidence-sidebar">
-            {caseDetails.evidence.length > 0 && (
-              <div className="summary-card">
-                <h3>Key Evidence</h3>
-                <ul className="evidence-list">
-                  {caseDetails.evidence.map(item => (
-                    <li key={item.id} className="evidence-item">
-                      {item.type === 'pdf' ? <FaFilePdf /> : <FaMicrophoneAlt />}
-                      <div className="evidence-info">
-                        <strong>{item.title}</strong>
-                        <span>Source: {item.source}</span>
-                      </div>
-                      <button className="btn btn-secondary btn-small">View</button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="summary-card">
+              <h3>Documents & Evidence</h3>
+              
+              {/* HIDDEN FILE INPUT */}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                style={{ display: 'none' }}
+                accept=".pdf,.doc,.docx,.txt,.jpg,.png" 
+              />
 
-            {caseDetails.contradictions.length > 0 && (
-              <div className="summary-card contradiction-card">
-                <h3><FaExclamationTriangle /> Contradictions Found</h3>
-                <ul className="contradiction-list">
-                  {caseDetails.contradictions.map(item => (
-                    <li key={item.id}>{item.text}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              {/* UPLOAD UI STATE MACHINE */}
+              {!selectedFile ? (
+                // State 1: Ready to select a file
+                <>
+                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                    {caseDetails.documents?.length > 0 
+                      ? `${caseDetails.documents.length} document(s) uploaded.` 
+                      : 'No documents uploaded yet.'}
+                  </p>
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }}
+                    onClick={triggerFileInput}
+                  >
+                    <FaUpload /> Select File to Upload
+                  </button>
+                </>
+              ) : (
+                // State 2: File selected, ready to confirm
+                <div style={{ background: 'var(--bg-primary)', padding: '15px', borderRadius: '8px', border: '1px dashed var(--primary-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                      📄 {selectedFile.name}
+                    </span>
+                    <button 
+                      onClick={cancelSelection} 
+                      disabled={isUploading}
+                      style={{ background: 'none', border: 'none', color: '#F87171', cursor: 'pointer' }}
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                  
+                  <button 
+                    className="btn btn-primary" 
+                    style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }}
+                    onClick={handleUploadSubmit}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? 'Uploading...' : 'Confirm & Upload'}
+                  </button>
+                </div>
+              )}
+
+              {/* Upload Status Messages */}
+              {uploadStatus.message && (
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '10px', 
+                  borderRadius: '8px', 
+                  fontSize: '0.85rem',
+                  color: uploadStatus.type === 'error' ? '#F87171' : '#10B981',
+                  background: uploadStatus.type === 'error' ? 'rgba(248, 113, 113, 0.1)' : 'rgba(16, 185, 129, 0.1)' 
+                }}>
+                  {uploadStatus.message}
+                </div>
+              )}
+            </div>
+
+            <div className="summary-card contradiction-card" style={{ opacity: 0.5 }}>
+              <h3><FaExclamationTriangle /> Contradictions</h3>
+              <p style={{ fontSize: '0.9rem' }}>AI will flag contradictions here once evidence is processed.</p>
+            </div>
           </div>
         </div>
       </div>
