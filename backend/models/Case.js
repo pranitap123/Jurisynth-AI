@@ -18,6 +18,17 @@ const caseSchema = new mongoose.Schema(
       enum: ["processing", "ready", "closed"],
       default: "processing"
     },
+    // THIS ARRAY IS THE PART YOU ARE LIKELY MISSING
+    documents: [
+      {
+        filename: String,
+        path: String,
+        uploadedAt: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
