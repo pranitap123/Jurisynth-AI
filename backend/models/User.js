@@ -21,7 +21,23 @@ const userSchema = new mongoose.Schema(
     },
     googleId: {
       type: String
+    },
+    // --- INSERT THIS BLOCK STARTING HERE ---
+    aiSettings: {
+      modelPreference: { 
+        type: String, 
+        default: "Gemini 2.5 Flash" 
+      },
+      analysisDepth: { 
+        type: String, 
+        default: "Comprehensive" 
+      },
+      simulationMode: { 
+        type: Boolean, 
+        default: false 
+      }
     }
+    // --- INSERT ENDS HERE ---
   },
   { timestamps: true }
 );
