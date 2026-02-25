@@ -10,7 +10,6 @@ type: String,
 enum: ["processing", "ready", "closed"],
 default: "processing"
 },
-// AI Generated Fields
 aiSummary: {
 type: String,
 default: ""

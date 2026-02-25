@@ -1,8 +1,5 @@
 const Case = require("../models/Case");
 
-/**
- * @desc    Create a new case
- */
 exports.createCase = async (req, res) => {
   try {
     const { title, caseNumber, description } = req.body;
@@ -20,9 +17,7 @@ exports.createCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get all cases for logged-in user
- */
+
 exports.getCases = async (req, res) => {
   try {
     const cases = await Case.find({ user: req.user.id }).sort({ createdAt: -1 });
@@ -32,9 +27,7 @@ exports.getCases = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get single case details
- */
+
 exports.getCaseById = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -53,9 +46,7 @@ exports.getCaseById = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update case details
- */
+
 exports.updateCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -80,9 +71,7 @@ exports.updateCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Delete a case
- */
+
 exports.deleteCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -103,19 +92,12 @@ exports.deleteCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Upload a document to a specific case
- * @route   POST /api/cases/:id/documents
- */
 exports.uploadDocument = async (req, res) => {
   try {
-    // 1. Verify file was received by Multer
     if (!req.file) {
       return res.status(400).json({ message: "No file was uploaded." });
     }
 
-    // 2. Atomic Update: Find case by ID and User, then push to the documents array
-    // Using findOneAndUpdate with $push is the most robust way to avoid 'undefined' errors
     const updatedCase = await Case.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id },
       { 

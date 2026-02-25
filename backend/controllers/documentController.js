@@ -22,6 +22,10 @@ exports.uploadDocument = async (req, res) => {
       uploadedBy: req.user.id
     });
 
+    await Case.findByIdAndUpdate(caseId, {
+      $push: { documents: newDocument._id }
+    });
+
     res.status(201).json(newDocument);
   } catch (error) {
     res.status(500).json({ message: error.message });

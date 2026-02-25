@@ -1,8 +1,8 @@
 const Case = require("../models/Case");
 const User = require("../models/User");
 const fs = require("fs");
-const pdfParse = require("pdf-parse"); // FIXED: Unique name to avoid naming conflicts
-const mammoth = require("mammoth"); // FIXED: Correctly integrated for Word support
+const pdfParse = require("pdf-parse"); 
+const mammoth = require("mammoth"); 
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -21,7 +21,6 @@ exports.generateSummary = async (req, res) => {
       return res.status(404).json({ message: "Case not found or unauthorized" });
     }
 
-    // Model selection based on user preferences
     const selectedModel = userData.aiSettings?.modelPreference === "Gemini 1.5 Pro" 
       ? "gemini-2.5-pro" 
       : "gemini-2.5-flash"; 
@@ -33,7 +32,6 @@ exports.generateSummary = async (req, res) => {
       return res.status(400).json({ message: "No documents found. Please upload evidence first." });
     }
 
-    // --- 1. Document Extraction Layer ---
     let combinedText = `Case Title: ${caseData.title}\nDescription: ${caseData.description}\n\n`;
 
     for (const doc of caseData.documents) {
@@ -41,12 +39,10 @@ exports.generateSummary = async (req, res) => {
         const dataBuffer = fs.readFileSync(doc.path);
         
         if (doc.filename.toLowerCase().endsWith(".pdf")) {
-          // FIXED: Calling pdfParse correctly as a function
           const pdfData = await pdfParse(dataBuffer);
           combinedText += `--- Content from ${doc.filename} ---\n${pdfData.text}\n\n`;
         } 
         else if (doc.filename.toLowerCase().endsWith(".docx")) {
-          // FIXED: Mammoth extraction logic inside the correct scope
           const docxData = await mammoth.extractRawText({ path: doc.path });
           combinedText += `--- Content from ${doc.filename} ---\n${docxData.value}\n\n`;
         } 
@@ -58,7 +54,6 @@ exports.generateSummary = async (req, res) => {
       }
     }
 
-    // SAFETY: Truncate text if it exceeds API limits to prevent 'Unterminated string' errors
     const safetyLimit = 25000;
     const truncatedText = combinedText.length > safetyLimit 
       ? combinedText.substring(0, safetyLimit) + "... [Text Truncated for Analysis]" 
@@ -66,7 +61,6 @@ exports.generateSummary = async (req, res) => {
 
     console.log(">>> Document Text Extracted. Length:", truncatedText.length);
 
-    // --- 2. AI Prompting & Payload ---
     const systemPrompt = "You are a senior legal analyst. Summarize the provided documents into a JSON object with two keys: 'summary' (professional paragraph) and 'keyPoints' (array of 5 strings).";
 
     const payload = {
@@ -77,7 +71,6 @@ exports.generateSummary = async (req, res) => {
       }
     };
 
-    // --- 3. External API Call ---
     const response = await fetch(GEMINI_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,16 +85,13 @@ exports.generateSummary = async (req, res) => {
       throw new Error(result.error?.message || "AI Analysis Failed");
     }
 
-    // --- 4. JSON Sanitation & Parsing ---
     let rawOutput = result.candidates[0].content.parts[0].text;
     
-    // FIXED: Sanitize markdown backticks that often break JSON.parse
     rawOutput = rawOutput.replace(/```json/g, "").replace(/```/g, "").trim();
 
     const aiOutput = JSON.parse(rawOutput);
     console.log(">>> Successfully parsed AI JSON");
 
-    // --- 5. Database Persistence ---
     caseData.aiSummary = aiOutput.summary;
     caseData.keyPoints = aiOutput.keyPoints;
     caseData.status = "ready"; 
@@ -116,7 +106,6 @@ exports.generateSummary = async (req, res) => {
   }
 };
 
-// GET existing summary from DB
 exports.getSummaryByCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.caseId);
