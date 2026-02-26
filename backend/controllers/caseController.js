@@ -17,20 +17,20 @@ exports.createCase = async (req, res) => {
   }
 };
 
-
 exports.getCases = async (req, res) => {
   try {
-    const cases = await Case.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const cases = await Case.find({ user: req.user.id })
+      .populate('documents')
+      .sort({ createdAt: -1 });
     res.json(cases);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
 exports.getCaseById = async (req, res) => {
   try {
-    const caseData = await Case.findById(req.params.id);
+    const caseData = await Case.findById(req.params.id).populate('documents');
 
     if (!caseData) {
       return res.status(404).json({ message: "Case not found" });
@@ -45,7 +45,6 @@ exports.getCaseById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 exports.updateCase = async (req, res) => {
   try {
@@ -63,14 +62,13 @@ exports.updateCase = async (req, res) => {
       req.params.id,
       req.body,
       { new: true }
-    );
+    ).populate('documents');
 
     res.json(updatedCase);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 exports.deleteCase = async (req, res) => {
   try {
@@ -109,7 +107,7 @@ exports.uploadDocument = async (req, res) => {
         } 
       },
       { new: true, runValidators: true }
-    );
+    ).populate('documents'); 
 
     if (!updatedCase) {
       return res.status(404).json({ message: "Case not found or unauthorized" });

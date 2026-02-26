@@ -1,7 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const path = require("path");
 const connectDB = require("./config/db");
+const User = require("./models/User");
+const protect = require("./middleware/authMiddleware");
 
 dotenv.config();
 connectDB();
@@ -10,26 +13,13 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-const protect = require("./middleware/authMiddleware");
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.get("/api/protected", protect, (req, res) => {
-  res.json({
-    message: "Protected route working",
-    user: req.user
-  });
-});
-// ... existing imports
-const User = require("./models/User"); // DON'T FORGET THIS
-
-// ... existing app.use middleware
-
-// FIX: Move this OUT of app.get("/test")
 app.patch('/api/users/settings', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Update the user's aiSettings field
         user.aiSettings = {
             modelPreference: req.body.modelPreference,
             analysisDepth: req.body.analysisDepth,
@@ -44,32 +34,28 @@ app.patch('/api/users/settings', protect, async (req, res) => {
     }
 });
 
-// Keep your test routes clean
-app.get("/test", (req, res) => {
-  res.send("Test route working");
+app.get("/api/protected", protect, (req, res) => {
+    res.json({
+        message: "Protected route working",
+        user: req.user
+    });
 });
-
-// ... rest of the file
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/cases", require("./routes/caseRoutes"));
 app.use("/api/documents", require("./routes/documentRoutes"));
-app.use("/uploads", express.static("uploads"));
 app.use("/api/summary", require("./routes/summaryRoutes"));
 
+app.get("/test", (req, res) => {
+    res.send("Test route working");
+});
 
 app.get("/", (req, res) => {
-  res.send("Jurisynth Backend Running");
+    res.send("Jurisynth Backend Running");
 });
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}`)
+    console.log(`Server running on port ${PORT}`)
 );
-
-app.get("/test", (req, res) => {
-  res.send("Test route working");
-
-  
-});
