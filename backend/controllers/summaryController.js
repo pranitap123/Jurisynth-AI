@@ -21,13 +21,11 @@ exports.generateSummary = async (req, res) => {
       return res.status(404).json({ message: "Case not found or unauthorized" });
     }
 
-    const selectedModel = userData.aiSettings?.modelPreference === "Gemini 1.5 Pro" 
-      ? "gemini-1.5-pro" 
-      : "gemini-1.5-flash"; 
+     const selectedModel = userData.aiSettings?.modelPreference === "Gemini 1.5 Pro"
+      ? "gemini-2.5-pro"
+      : "gemini-2.5-flash"; 
 
-    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-    
-    // THE LEAKING LINE HAS BEEN REMOVED HERE
+ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;    
     console.log(">>> Initiating secure AI analysis request...");
 
     if (!caseData.documents || caseData.documents.length === 0) {
