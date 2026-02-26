@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { FaSearch, FaFilePdf, FaMicrophoneAlt } from 'react-icons/fa';
 
-// Mock search results
 const mockSearchResults = [
   {
     id: 1,
@@ -31,7 +30,6 @@ const mockSearchResults = [
   },
 ];
 
-
 function GlobalSearchPage() {
   const [currentUser, setCurrentUser] = useState({ name: 'Guest', initials: 'G' });
   const [query, setQuery] = useState('');
@@ -53,28 +51,23 @@ function GlobalSearchPage() {
     console.log('Searching for:', query);
     setIsSearching(true);
 
-    // Fake an API call
     setTimeout(() => {
-      // We filter the mock results based on the query for a realistic demo
       const filteredResults = mockSearchResults.filter(r => 
         query.toLowerCase().includes('breach of contract')
       );
       setResults(filteredResults);
       setIsSearching(false);
-    }, 1000); // Simulate a 1-second search
+    }, 1000);
   };
 
   const handleSuggestionClick = (suggestion) => {
     setQuery(suggestion);
-    // You could optionally trigger the search immediately:
-    // handleSearch({ preventDefault: () => {} }); // Pass a fake event
   };
 
   return (
     <DashboardLayout userName={currentUser.name} userInitials={currentUser.initials}>
       <div className="search-page-container">
         
-        {/* --- Search Bar --- */}
         <form className="global-search-bar" onSubmit={handleSearch}>
           <FaSearch className="search-icon-large" />
           <input 
@@ -88,7 +81,6 @@ function GlobalSearchPage() {
           </button>
         </form>
 
-        {/* --- Search Suggestions --- */}
         <div className="search-suggestions">
           <span>Try:</span>
           <button onClick={() => handleSuggestionClick('"breach of contract"')}>
@@ -102,7 +94,6 @@ function GlobalSearchPage() {
           </button>
         </div>
 
-        {/* --- Search Results --- */}
         <div className="search-results-container">
           {results.length > 0 && <h3>Found {results.length} results for "{query}"</h3>}
 
@@ -117,8 +108,9 @@ function GlobalSearchPage() {
                     Found in: <strong>{result.caseName}</strong>
                   </Link>
                   <span className="result-source">{result.source}</span>
-                  <p className="result-snippet"
-                     dangerouslySetInnerHTML={{ __html: result.snippet }} 
+                  <p 
+                    className="result-snippet"
+                    dangerouslySetInnerHTML={{ __html: result.snippet }} 
                   />
                 </div>
               </div>

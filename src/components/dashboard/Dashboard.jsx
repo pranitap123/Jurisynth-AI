@@ -7,7 +7,6 @@ import {
 } from 'react-icons/fa';
 import { MdOutlineSummarize } from 'react-icons/md';
 
-// Mock Data for the attention widget (we will make this dynamic later)
 const attentionItems = [
   {
     id: 1,
@@ -34,7 +33,6 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // --- Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState(null);
@@ -48,7 +46,6 @@ function Dashboard() {
     const savedName = localStorage.getItem('loggedInUserName');
     const token = localStorage.getItem('token');
 
-    // Security check: If there's no token, kick them back to login
     if (!token) {
       navigate('/auth');
       return;
@@ -59,14 +56,13 @@ function Dashboard() {
       setCurrentUser({ name: savedName, initials: initials });
     }
 
-    // Fetch real cases from your backend
     const fetchCases = async () => {
       try {
         const response = await fetch('http://localhost:5000/api/cases', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // Send the JWT token
+            'Authorization': `Bearer ${token}`
           }
         });
 
@@ -87,7 +83,6 @@ function Dashboard() {
     fetchCases();
   }, [navigate]);
 
-  // --- Create Case Handler ---
   const handleCreateCase = async (e) => {
     e.preventDefault();
     setModalError(null);
@@ -111,10 +106,8 @@ function Dashboard() {
         throw new Error(data.message || 'Failed to create case');
       }
 
-      // Success! Add new case to the top of the list
       setCases([data, ...cases]);
       
-      // Close modal and reset form
       setIsModalOpen(false);
       setFormData({ title: '', caseNumber: '', description: '' });
 
@@ -125,7 +118,6 @@ function Dashboard() {
     }
   };
 
-  // Helper to dynamically style the status badges based on DB enum
   const getStatusDisplay = (status) => {
     switch(status) {
       case 'ready':
@@ -144,7 +136,6 @@ function Dashboard() {
         <h1>Welcome back, {currentUser.name}!</h1>
       </div>
       
-      {/* === QUICK ACTIONS === */}
       <section className="dashboard-section">
         <h2>Quick Actions</h2>
         <div className="quick-actions-grid">
@@ -163,21 +154,17 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* === RECENT CASES (NOW DYNAMIC) === */}
       <section className="dashboard-section">
         <h2>Recent Cases</h2>
         
-        {/* State 1: Loading */}
         {isLoading && <p style={{ color: 'var(--text-secondary)' }}>Loading your cases...</p>}
         
-        {/* State 2: Error fetching */}
         {error && (
           <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
             <strong>Error:</strong> {error}
           </div>
         )}
 
-        {/* State 3: Empty State (No cases in database) */}
         {!isLoading && !error && cases.length === 0 && (
           <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>You don't have any cases yet.</p>
@@ -187,10 +174,8 @@ function Dashboard() {
           </div>
         )}
 
-        {/* State 4: Data loaded successfully */}
         {!isLoading && !error && cases.length > 0 && (
           <div className="case-grid">
-            {/* Show only the 3 most recent cases on the dashboard */}
             {cases.slice(0, 3).map((caseItem) => {
               const statusDisplay = getStatusDisplay(caseItem.status);
               
@@ -199,7 +184,6 @@ function Dashboard() {
                   <h4>{caseItem.title}</h4>
                   <p>Case #{caseItem.caseNumber}</p>
                   
-                  {/* Dynamic Status Badge */}
                   <span className={`case-status ${statusDisplay.cssClass}`}>
                     {statusDisplay.icon} {statusDisplay.text}
                   </span>
@@ -217,7 +201,6 @@ function Dashboard() {
         )}
       </section>
 
-      {/* === "ATTENTION REQUIRED" WIDGET === */}
       <section className="dashboard-section">
         <h2>Attention Required</h2>
         <div className="attention-widget">
@@ -237,7 +220,6 @@ function Dashboard() {
         </div>
       </section>
 
-      {/* === CREATE CASE MODAL === */}
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',

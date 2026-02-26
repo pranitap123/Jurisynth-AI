@@ -7,21 +7,17 @@ function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
 
-  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('advocate'); // Matches backend enum perfectly
+  const [role, setRole] = useState('advocate');
 
-  // UI State
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null); 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Backend URL - Absolute path required for Electron
   const API_URL = 'http://localhost:5000/api/auth';
 
-  // --- STANDARD EMAIL/PASSWORD SUBMIT ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -45,17 +41,14 @@ function AuthPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // This catches your backend Zod errors or invalid credentials
         throw new Error(data.message || 'Authentication failed');
       }
 
       if (!isLogin) {
-        // REGISTRATION SUCCESS FLOW
         setIsLogin(true); 
         setSuccessMsg('Account created successfully! Please log in.');
-        setPassword(''); // Clear password for security
+        setPassword('');
       } else {
-        // LOGIN SUCCESS FLOW
         localStorage.setItem('token', data.token);
         localStorage.setItem('loggedInUserName', data.name);
         localStorage.setItem('userRole', data.role);
@@ -71,7 +64,6 @@ function AuthPage() {
     }
   };
 
-  // --- GOOGLE AUTHENTICATION HANDLER ---
   const handleGoogleSuccess = async (credentialResponse) => {
     setError(null);
     try {
@@ -99,7 +91,6 @@ function AuthPage() {
 
   return (
     <div className="auth-page-layout">
-      {/* --- Left Side: Branding Panel --- */}
       <div className="auth-branding-panel">
         <a href="/" className="branding-logo">
           <FaScaleBalanced style={{ color: 'var(--primary-color)', marginRight: '10px' }} />
@@ -115,19 +106,16 @@ function AuthPage() {
         </div>
       </div>
 
-      {/* --- Right Side: Form Panel --- */}
       <div className="auth-form-panel">
         <div className="auth-card">
           <h2>{isLogin ? 'Welcome back' : 'Create an account'}</h2>
           
-          {/* Display Backend Errors (including Zod validation) Here */}
           {error && (
             <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '10px', borderRadius: '8px', margin: '0 0 15px 0', fontSize: '0.9rem', textAlign: 'center' }}>
               {error}
             </div>
           )}
 
-          {/* Display Registration Success Message Here */}
           {successMsg && (
             <div style={{ color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '8px', margin: '0 0 15px 0', fontSize: '0.9rem', textAlign: 'center' }}>
               {successMsg}

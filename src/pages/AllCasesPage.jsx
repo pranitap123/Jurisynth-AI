@@ -7,7 +7,6 @@ import {
 } from 'react-icons/fa';
 import { MdOutlineSummarize } from 'react-icons/md';
 
-// A longer list of mock cases for this page
 const mockCaseList = [
   {
     id: '2025-081',
@@ -53,7 +52,6 @@ function AllCasesPage() {
     }
   }, []);
 
-  // Filter cases based on search term
   const filteredCases = mockCaseList.filter(caseItem =>
     caseItem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     caseItem.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -63,7 +61,6 @@ function AllCasesPage() {
     <DashboardLayout userName={currentUser.name} userInitials={currentUser.initials}>
       <div className="all-cases-container">
         
-        {/* --- Header & Actions --- */}
         <div className="all-cases-header">
           <h1>
             <FaFolderOpen /> All Cases
@@ -84,7 +81,6 @@ function AllCasesPage() {
           </div>
         </div>
 
-        {/* --- Cases Table --- */}
         <div className="table-container">
           <table>
             <thead>

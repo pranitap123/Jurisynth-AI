@@ -1,258 +1,194 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { FaFilePdf, FaMicrophoneAlt, FaExclamationTriangle, FaArrowLeft, FaUpload, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaRobot, FaTimes, FaCheck, FaUpload, FaEye, FaFileAlt } from 'react-icons/fa';
 
 function CaseViewPage() {
-  const { caseId } = useParams(); 
+  const { caseId } = useParams();
+  
   const [caseDetails, setCaseDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null); 
+  const [isUploading, setIsUploading] = useState(false); 
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // --- Upload State ---
   const fileInputRef = useRef(null);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState({ type: '', message: '' });
 
   const userName = localStorage.getItem('loggedInUserName') || 'Guest';
   const userInitials = userName.split(' ').map(n => n[0]).join('').toUpperCase() || 'G';
 
-  const fetchCaseData = async () => {
+  const fetchCaseData = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      
       const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch case details');
-      }
-
       setCaseDetails(data);
     } catch (err) {
-      setError(err.message);
+      console.error("Fetch error:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [caseId]);
 
   useEffect(() => {
     fetchCaseData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caseId]);
+  }, [fetchCaseData]);
 
-  // --- Upload Handlers ---
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
-      setUploadStatus({ type: '', message: '' }); // Clear previous messages
     }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
-  };
-
-  const cancelSelection = () => {
-    setSelectedFile(null);
-    setUploadStatus({ type: '', message: '' });
-    if (fileInputRef.current) fileInputRef.current.value = ''; // Reset input
   };
 
   const handleUploadSubmit = async () => {
     if (!selectedFile) return;
-
     setIsUploading(true);
-    setUploadStatus({ type: '', message: '' });
-
     const formData = new FormData();
-    // 'document' is the field name your backend multer setup will likely expect. 
-    formData.append('document', selectedFile); 
-
+    formData.append('document', selectedFile);
+    formData.append('caseId', caseId); 
+    
     try {
       const token = localStorage.getItem('token');
-      
-      // IMPORTANT: Notice we DO NOT set 'Content-Type' here. 
-      // When using FormData, the browser automatically sets it to 'multipart/form-data' with the correct boundary.
-      const response = await fetch(`http://localhost:5000/api/cases/${caseId}/documents`, {
+      await fetch(`http://localhost:5000/api/cases/${caseId}/documents`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Upload failed');
-      }
-
-      setUploadStatus({ type: 'success', message: 'Document uploaded successfully!' });
-      setSelectedFile(null); // Reset selection
-      
-      // Refetch the case data so the new document appears in the list
-      fetchCaseData(); 
-
+      setSelectedFile(null);
+      fetchCaseData();
     } catch (err) {
-      setUploadStatus({ type: 'error', message: err.message });
+      console.error(err);
     } finally {
       setIsUploading(false);
     }
   };
 
-  // --- Render Loading State ---
-  if (isLoading) {
-    return (
-      <DashboardLayout userName={userName} userInitials={userInitials}>
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          Loading case details...
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const handleGenerateAI = async () => {
+    setIsAnalyzing(true);
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`http://localhost:5000/api/summary/${caseId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchCaseData();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
-  // --- Render Error State ---
-  if (error || !caseDetails) {
-    return (
-      <DashboardLayout userName={userName} userInitials={userInitials}>
-        <div className="case-view-container">
-          <div className="case-view-header">
-            <Link to="/dashboard" className="back-button">
-              <FaArrowLeft /> Back to Dashboard
-            </Link>
-            <h1>Case Not Found</h1>
-          </div>
-          <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '15px', borderRadius: '8px' }}>
-            {error || "The details for this case could not be retrieved. Please check the ID."}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const getStatus = () => {
+    if (isAnalyzing) return { label: 'Processing...', class: 'status-processing' };
+    if (caseDetails?.status === 'ready') return { label: 'Analysis Ready', class: 'status-ready' };
+    if (caseDetails?.documents?.length > 0) return { label: 'Pending Analysis', class: 'status-pending' };
+    return { label: 'Awaiting Documents', class: 'status-new' };
+  };
 
-  // --- Render Actual Case Data ---
+  if (isLoading || !caseDetails) return <DashboardLayout userName={userName} userInitials={userInitials}><div>Loading...</div></DashboardLayout>;
+
+  const status = getStatus();
+
   return (
     <DashboardLayout userName={userName} userInitials={userInitials}>
       <div className="case-view-container">
         <div className="case-view-header">
-          <Link to="/dashboard" className="back-button">
-            <FaArrowLeft /> Back to Dashboard
-          </Link>
-          <h1>{caseDetails.title}</h1>
-          <span className="case-id">Case #{caseDetails.caseNumber}</span>
+          <Link to="/dashboard" className="back-link"><FaArrowLeft /> Back to Dashboard</Link>
+          <div className="header-split">
+            <div className="header-title">
+              <div className="title-row">
+                <h1>{caseDetails.title}</h1>
+                <span className={`status-badge ${status.class}`}>{status.label}</span>
+              </div>
+              <span className="case-number-badge">Case #{caseDetails.caseNumber}</span>
+            </div>
+            {caseDetails.documents?.length > 0 && (
+              <button 
+                className={`generate-ai-btn ${isAnalyzing ? 'pulse' : ''}`} 
+                onClick={handleGenerateAI} 
+                disabled={isAnalyzing}
+              >
+                <FaRobot /> {isAnalyzing ? 'Analyzing...' : 'Generate AI Insights'}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="case-view-layout">
-          {/* --- Left Column: Summary --- */}
-          <div className="summary-content">
-            <div className="summary-card">
-              <h3>Description</h3>
-              <p>{caseDetails.description || 'No description provided for this case.'}</p>
+        <div className="case-view-grid">
+          <div className="main-content-area">
+            <div className="case-card">
+              <h3>Case Description</h3>
+              <p>{caseDetails.description || 'No description provided.'}</p>
             </div>
             
-            {/* These are placeholders until we build the AI extraction features */}
-            <div className="summary-card" style={{ opacity: 0.5 }}>
+            <div className="case-card">
               <h3>Key Facts (AI Generated)</h3>
-              <p>Upload documents to automatically generate key facts.</p>
+              {isAnalyzing ? (
+                <div className="skeleton-loader">AI is scanning documents...</div>
+              ) : caseDetails.keyPoints?.length > 0 ? (
+                <ul className="points-list">
+                  {caseDetails.keyPoints.map((p, i) => <li key={i}>{p}</li>)}
+                </ul>
+              ) : (
+                <p className="placeholder">Upload documents and click Generate to extract facts.</p>
+              )}
             </div>
 
-            <div className="summary-card-grid" style={{ opacity: 0.5 }}>
-              <div className="summary-card">
-                <h3>Plaintiff's Arguments</h3>
-                <p>Pending document analysis...</p>
-              </div>
-              <div className="summary-card">
-                <h3>Defendant's Arguments</h3>
-                <p>Pending document analysis...</p>
-              </div>
+            <div className="case-card">
+              <h3>AI Legal Analysis</h3>
+              {isAnalyzing ? (
+                <div className="skeleton-loader-text">Analyzing legal implications...</div>
+              ) : (
+                <p className="analysis-text">{caseDetails.aiSummary || 'Pending analysis...'}</p>
+              )}
             </div>
           </div>
 
-          {/* --- Right Column: Evidence & Uploads --- */}
-          <div className="evidence-sidebar">
-            <div className="summary-card">
+          <div className="sidebar-area">
+            <div className="case-card">
               <h3>Documents & Evidence</h3>
               
-              {/* HIDDEN FILE INPUT */}
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                style={{ display: 'none' }}
-                accept=".pdf,.doc,.docx,.txt,.jpg,.png" 
-              />
-
-              {/* UPLOAD UI STATE MACHINE */}
-              {!selectedFile ? (
-                // State 1: Ready to select a file
-                <>
-                  <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-                    {caseDetails.documents?.length > 0 
-                      ? `${caseDetails.documents.length} document(s) uploaded.` 
-                      : 'No documents uploaded yet.'}
-                  </p>
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }}
-                    onClick={triggerFileInput}
-                  >
-                    <FaUpload /> Select File to Upload
-                  </button>
-                </>
-              ) : (
-                // State 2: File selected, ready to confirm
-                <div style={{ background: 'var(--bg-primary)', padding: '15px', borderRadius: '8px', border: '1px dashed var(--primary-color)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: '0.9rem', color: 'var(--text-primary)', wordBreak: 'break-all' }}>
-                      📄 {selectedFile.name}
-                    </span>
-                    <button 
-                      onClick={cancelSelection} 
-                      disabled={isUploading}
-                      style={{ background: 'none', border: 'none', color: '#F87171', cursor: 'pointer' }}
+              <div className="uploaded-docs-list">
+                {caseDetails.documents?.map((doc, idx) => (
+                  <div key={idx} className="doc-list-item">
+                    <div className="doc-info">
+                      <FaFileAlt className="doc-icon" />
+                      <span title={doc.fileName || doc.filename}>{doc.fileName || doc.filename}</span>
+                    </div>
+                    <a 
+                      href={`http://localhost:5000/${(doc.filePath || doc.path)?.replace(/\\/g, '/')}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="view-btn"
                     >
-                      <FaTimes />
-                    </button>
+                      <FaEye /> View
+                    </a>
                   </div>
-                  
-                  <button 
-                    className="btn btn-primary" 
-                    style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px' }}
-                    onClick={handleUploadSubmit}
-                    disabled={isUploading}
-                  >
-                    {isUploading ? 'Uploading...' : 'Confirm & Upload'}
-                  </button>
+                ))}
+              </div>
+
+              <hr className="divider" />
+
+              {!selectedFile ? (
+                <button className="select-file-btn" onClick={() => fileInputRef.current.click()}>
+                  <FaUpload /> Add Document
+                </button>
+              ) : (
+                <div className="upload-confirmation-ui">
+                  <p className="file-preview">📄 {selectedFile.name}</p>
+                  <div className="confirmation-actions">
+                    <button className="confirm-btn" onClick={handleUploadSubmit} disabled={isUploading}>
+                      <FaCheck /> {isUploading ? 'Uploading...' : 'Confirm'}
+                    </button>
+                    <button className="cancel-btn" onClick={() => setSelectedFile(null)}><FaTimes /></button>
+                  </div>
                 </div>
               )}
-
-              {/* Upload Status Messages */}
-              {uploadStatus.message && (
-                <div style={{ 
-                  marginTop: '1rem', 
-                  padding: '10px', 
-                  borderRadius: '8px', 
-                  fontSize: '0.85rem',
-                  color: uploadStatus.type === 'error' ? '#F87171' : '#10B981',
-                  background: uploadStatus.type === 'error' ? 'rgba(248, 113, 113, 0.1)' : 'rgba(16, 185, 129, 0.1)' 
-                }}>
-                  {uploadStatus.message}
-                </div>
-              )}
-            </div>
-
-            <div className="summary-card contradiction-card" style={{ opacity: 0.5 }}>
-              <h3><FaExclamationTriangle /> Contradictions</h3>
-              <p style={{ fontSize: '0.9rem' }}>AI will flag contradictions here once evidence is processed.</p>
+              <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} accept=".pdf,.docx,.txt" />
             </div>
           </div>
         </div>

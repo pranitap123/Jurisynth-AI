@@ -22,11 +22,13 @@ exports.generateSummary = async (req, res) => {
     }
 
     const selectedModel = userData.aiSettings?.modelPreference === "Gemini 1.5 Pro" 
-      ? "gemini-2.5-pro" 
-      : "gemini-2.5-flash"; 
+      ? "gemini-1.5-pro" 
+      : "gemini-1.5-flash"; 
 
     const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-    console.log(">>> Calling Gemini API at URL:", GEMINI_URL);
+    
+    // THE LEAKING LINE HAS BEEN REMOVED HERE
+    console.log(">>> Initiating secure AI analysis request...");
 
     if (!caseData.documents || caseData.documents.length === 0) {
       return res.status(400).json({ message: "No documents found. Please upload evidence first." });
