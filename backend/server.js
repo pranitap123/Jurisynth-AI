@@ -23,6 +23,16 @@ app.use(cors({
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+app.get('/api/users/settings', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('aiSettings');
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.json({ settings: user.aiSettings });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching settings" });
+    }
+});
+
 app.patch('/api/users/settings', protect, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
@@ -40,6 +50,16 @@ app.patch('/api/users/settings', protect, async (req, res) => {
         console.error("Settings Update Error:", error);
         res.status(500).json({ message: "Server Error" });
     }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+    res.cookie("token", "", {
+        httpOnly: true,
+        expires: new Date(0), 
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict"
+    });
+    res.status(200).json({ message: "Session revoked and token expired" });
 });
 
 app.use("/api/auth", require("./routes/authRoutes"));

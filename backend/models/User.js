@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema(
     googleId: {
       type: String
     },
-    // --- INSERT THIS BLOCK STARTING HERE ---
     aiSettings: {
       modelPreference: { 
         type: String, 
@@ -37,7 +36,6 @@ const userSchema = new mongoose.Schema(
         default: false 
       }
     }
-    // --- INSERT ENDS HERE ---
   },
   { timestamps: true }
 );
