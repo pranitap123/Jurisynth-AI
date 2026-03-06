@@ -3,18 +3,16 @@ name: Deploy to Amazon EC2
 on:
   push:
     branches:
-      - master  # This triggers the pipeline whenever you push to the 'main' branch
+      - master  
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Check out the code from GitHub
     - name: Checkout code
       uses: actions/checkout@v2
 
-    # 2. SSH into the server and run commands
     - name: Deploy to EC2
       uses: appleboy/ssh-action@master
       with:

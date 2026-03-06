@@ -1,6 +1,6 @@
 import React from 'react';
 import './styles.css'; 
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
 import HomePage from './pages/HomePage';
@@ -16,7 +16,7 @@ function App() {
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/auth" element={<AuthPage />} />
@@ -27,7 +27,7 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </GoogleOAuthProvider>
   );
 }
