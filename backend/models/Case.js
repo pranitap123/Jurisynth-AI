@@ -10,8 +10,8 @@ const caseSchema = new mongoose.Schema(
     caseNumber: { 
       type: String, 
       required: true, 
-      unique: true, // This prevents duplicate Case IDs at the database level
-      trim: true    // Removes accidental whitespace
+      unique: true, 
+      trim: true    
     },
     description: { 
       type: String 
@@ -45,7 +45,6 @@ const caseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Optional: Create a text index for the search feature
 caseSchema.index({ title: 'text', caseNumber: 'text' });
 
 module.exports = mongoose.model("Case", caseSchema);

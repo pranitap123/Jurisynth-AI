@@ -18,7 +18,6 @@ const protect = (req, res, next) => {
 
 const authorize = (...roles) => {
   return (req, res, next) => {
-    // This will now look for "advocate" or "user"
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ 
         message: `Role (${req.user.role}) is not authorized.` 

@@ -27,7 +27,6 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
-// 1. ADD BACK REGISTER
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -48,7 +47,6 @@ exports.register = async (req, res) => {
   }
 };
 
-// 2. ADD BACK LOGIN
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -64,7 +62,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// 3. GOOGLE LOGIN
 exports.googleLogin = async (req, res) => {
   try {
     const { token } = req.body;

@@ -1,11 +1,6 @@
 const Case = require("../models/Case");
 const User = require("../models/User");
 
-/**
- * @desc    Create a new legal case
- * @route   POST /api/cases
- * @access  Private (Advocate Only via Route Guard)
- */
 exports.createCase = async (req, res) => {
   try {
     const { title, caseNumber, description } = req.body;
@@ -33,17 +28,10 @@ exports.createCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get all cases authorized for the logged-in user
- * @route   GET /api/cases
- * @access  Private
- * UPDATED: Allows standard users to see all cases while advocates see only theirs
- */
 exports.getCases = async (req, res) => {
   try {
     let query = {};
 
-    // If advocate, show only cases they created. If user, show all.
     if (req.user.role === 'advocate') {
       query = { user: req.user.id };
     }
@@ -75,11 +63,6 @@ exports.getCases = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get single case details
- * @route   GET /api/cases/:id
- * UPDATED: Allows 'user' role to bypass ownership check for viewing
- */
 exports.getCaseById = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id).populate('documents');
@@ -88,7 +71,6 @@ exports.getCaseById = async (req, res) => {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    // Security check: Only block if NOT an advocate and NOT a authorized user
     if (req.user.role === 'advocate' && caseData.user.toString() !== req.user.id) {
       return res.status(403).json({ message: "Access denied" });
     }
@@ -99,11 +81,6 @@ exports.getCaseById = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update case details
- * @route   PUT /api/cases/:id
- * SECURITY: Still restricts updates to the original creator (Advocate)
- */
 exports.updateCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -112,7 +89,6 @@ exports.updateCase = async (req, res) => {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    // Only the creator (advocate) can update the case
     if (caseData.user.toString() !== req.user.id) {
       return res.status(403).json({ message: "Access denied. Only the assigned advocate can update this case." });
     }
@@ -136,10 +112,6 @@ exports.updateCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Delete a case
- * @route   DELETE /api/cases/:id
- */
 exports.deleteCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -160,16 +132,12 @@ exports.deleteCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Upload document to specific case
- */
 exports.uploadDocument = async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: "No file was uploaded." });
     }
 
-    // Standard users can view but should usually not upload to an advocate's case unless authorized
     const query = { _id: req.params.id };
     if (req.user.role === 'advocate') {
       query.user = req.user.id;

@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     aiSettings: {
       modelPreference: { 
         type: String, 
-        default: "Gemini 2.5 Flash" // Maintained as per your request
+        default: "Gemini 2.5 Flash" 
       },
       analysisDepth: { 
         type: String, 

@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-// FIX: Destructure the import
 const { protect } = require("../middleware/authMiddleware"); 
 const upload = require("../middleware/uploadMiddleware"); 
 
