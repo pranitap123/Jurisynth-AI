@@ -8,7 +8,9 @@ const morgan = require("morgan");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
 const User = require("./models/User");
-const protect = require("./middleware/authMiddleware");
+
+// FIX: Destructure the object to get the protect function
+const { protect } = require("./middleware/authMiddleware"); 
 const validateSettings = require("./middleware/validateSettings");
 
 dotenv.config();
@@ -39,6 +41,7 @@ app.use("/api/", apiLimiter);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// This route will now work correctly with the destructured 'protect'
 app.get('/api/users/settings', protect, async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id).select('aiSettings');
@@ -72,7 +75,7 @@ app.post("/api/auth/logout", (req, res) => {
         httpOnly: true,
         expires: new Date(0), 
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict"
+        sameSite: "lax" // Changed to lax to stay consistent with login
     });
     res.status(200).json({ message: "Session revoked" });
 });

@@ -9,12 +9,23 @@ const protect = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    req.user = decoded;
+    req.user = decoded; 
     next();
   } catch (error) {
     res.status(401).json({ message: "Not authorized, session expired or invalid" });
   }
 };
 
-module.exports = protect;
+const authorize = (...roles) => {
+  return (req, res, next) => {
+    // This will now look for "advocate" or "user"
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ 
+        message: `Role (${req.user.role}) is not authorized.` 
+      });
+    }
+    next();
+  };
+};
+
+module.exports = { protect, authorize };

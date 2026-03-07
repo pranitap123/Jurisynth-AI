@@ -3,36 +3,31 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { OAuth2Client } = require("google-auth-library");
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// --- 1. DEFINE THIS FIRST ---
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: "7d"
   });
 };
 
-// --- 2. DEFINE HELPER NEXT ---
 const sendTokenResponse = (user, statusCode, res) => {
-  const token = generateToken(user._id, user.role); // Now generateToken is defined!
-
+  const token = generateToken(user._id, user.role);
   const cookieOptions = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   };
-
   res.status(statusCode).cookie("token", token, cookieOptions).json({
     success: true,
     _id: user._id,
     name: user.name,
     role: user.role,
-    token 
   });
 };
 
-// --- 3. EXPORT FUNCTIONS ---
+// 1. ADD BACK REGISTER
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -40,14 +35,20 @@ exports.register = async (req, res) => {
     if (userExists) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hashedPassword, role });
+    const user = await User.create({ 
+      name, 
+      email, 
+      password: hashedPassword, 
+      role: role || "user" 
+    });
 
-    sendTokenResponse(user, 201, res); // 'user' is defined here
+    sendTokenResponse(user, 201, res);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// 2. ADD BACK LOGIN
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -57,16 +58,17 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-    sendTokenResponse(user, 200, res); // 'user' is defined here
+    sendTokenResponse(user, 200, res);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
+// 3. GOOGLE LOGIN
 exports.googleLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    const ticket = await client.verifyIdToken({
+    const ticket = await googleClient.verifyIdToken({
       idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID
     });
@@ -79,12 +81,13 @@ exports.googleLogin = async (req, res) => {
         name,
         email,
         googleId: sub,
-        role: 'user'
+        role: 'user' 
       });
     }
 
-    sendTokenResponse(user, 200, res); // 'user' is defined here
+    sendTokenResponse(user, 200, res);
   } catch (error) {
+    console.error("Google Auth Error:", error.message);
     res.status(401).json({ message: "Google authentication failed" });
   }
-}; 
+};
