@@ -4,6 +4,17 @@ exports.createCase = async (req, res) => {
   try {
     const { title, caseNumber, description } = req.body;
 
+    // 1. Check if the Case ID already exists
+    // We check globally to ensure Case Numbers remain unique across the platform
+    const existingCase = await Case.findOne({ caseNumber });
+
+    if (existingCase) {
+      // 2. Return the exact error message requested
+      return res.status(400).json({ 
+        message: "This case ID already exists. Please enter a different Case ID." 
+      });
+    }
+
     const newCase = await Case.create({
       title,
       caseNumber,
@@ -13,6 +24,10 @@ exports.createCase = async (req, res) => {
 
     res.status(201).json(newCase);
   } catch (error) {
+    // Handling MongoDB duplicate key error as a fallback
+    if (error.code === 11000) {
+        return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
+    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -56,6 +71,14 @@ exports.updateCase = async (req, res) => {
 
     if (caseData.user.toString() !== req.user.id) {
       return res.status(403).json({ message: "Access denied" });
+    }
+
+    // If caseNumber is being updated, check for uniqueness again
+    if (req.body.caseNumber && req.body.caseNumber !== caseData.caseNumber) {
+        const duplicate = await Case.findOne({ caseNumber: req.body.caseNumber });
+        if (duplicate) {
+            return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
+        }
     }
 
     const updatedCase = await Case.findByIdAndUpdate(
