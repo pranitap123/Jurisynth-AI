@@ -1,11 +1,16 @@
 const Case = require("../models/Case");
+const User = require("../models/User");
 
-/**
- * @desc    Create a new case
- */
 exports.createCase = async (req, res) => {
   try {
     const { title, caseNumber, description } = req.body;
+
+    const existingCase = await Case.findOne({ caseNumber });
+    if (existingCase) {
+      return res.status(400).json({ 
+        message: "This case ID already exists. Please enter a different Case ID." 
+      });
+    }
 
     const newCase = await Case.create({
       title,
@@ -16,34 +21,57 @@ exports.createCase = async (req, res) => {
 
     res.status(201).json(newCase);
   } catch (error) {
+    if (error.code === 11000) {
+        return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
+    }
     res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * @desc    Get all cases for logged-in user
- */
 exports.getCases = async (req, res) => {
   try {
-    const cases = await Case.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.json(cases);
+    let query = {};
+
+    if (req.user.role === 'advocate') {
+      query = { user: req.user.id };
+    }
+
+    const cases = await Case.find(query)
+      .populate('documents')
+      .sort({ createdAt: -1 });
+
+    let userName = req.user.name;
+    let userRole = req.user.role;
+
+    if (!userName || !userRole) {
+      const dbUser = await User.findById(req.user.id);
+      if (dbUser) {
+        userName = dbUser.name;
+        userRole = dbUser.role;
+      }
+    }
+
+    res.json({
+      cases: cases || [],
+      user: {
+        name: userName || "User",
+        role: userRole || "user"
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-/**
- * @desc    Get single case details
- */
 exports.getCaseById = async (req, res) => {
   try {
-    const caseData = await Case.findById(req.params.id);
+    const caseData = await Case.findById(req.params.id).populate('documents');
 
     if (!caseData) {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    if (caseData.user.toString() !== req.user.id) {
+    if (req.user.role === 'advocate' && caseData.user.toString() !== req.user.id) {
       return res.status(403).json({ message: "Access denied" });
     }
 
@@ -53,9 +81,6 @@ exports.getCaseById = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update case details
- */
 exports.updateCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -65,14 +90,21 @@ exports.updateCase = async (req, res) => {
     }
 
     if (caseData.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({ message: "Access denied. Only the assigned advocate can update this case." });
+    }
+
+    if (req.body.caseNumber && req.body.caseNumber !== caseData.caseNumber) {
+        const duplicate = await Case.findOne({ caseNumber: req.body.caseNumber });
+        if (duplicate) {
+            return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
+        }
     }
 
     const updatedCase = await Case.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
-    );
+    ).populate('documents');
 
     res.json(updatedCase);
   } catch (error) {
@@ -80,9 +112,6 @@ exports.updateCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Delete a case
- */
 exports.deleteCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
@@ -103,21 +132,19 @@ exports.deleteCase = async (req, res) => {
   }
 };
 
-/**
- * @desc    Upload a document to a specific case
- * @route   POST /api/cases/:id/documents
- */
 exports.uploadDocument = async (req, res) => {
   try {
-    // 1. Verify file was received by Multer
     if (!req.file) {
       return res.status(400).json({ message: "No file was uploaded." });
     }
 
-    // 2. Atomic Update: Find case by ID and User, then push to the documents array
-    // Using findOneAndUpdate with $push is the most robust way to avoid 'undefined' errors
+    const query = { _id: req.params.id };
+    if (req.user.role === 'advocate') {
+      query.user = req.user.id;
+    }
+
     const updatedCase = await Case.findOneAndUpdate(
-      { _id: req.params.id, user: req.user.id },
+      query,
       { 
         $push: { 
           documents: { 
@@ -127,7 +154,7 @@ exports.uploadDocument = async (req, res) => {
         } 
       },
       { new: true, runValidators: true }
-    );
+    ).populate('documents'); 
 
     if (!updatedCase) {
       return res.status(404).json({ message: "Case not found or unauthorized" });

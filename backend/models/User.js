@@ -14,13 +14,27 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String
     },
-    role: {
+   role: {
       type: String,
-      enum: ["user", "advocate"],
+      enum: ["user", "advocate"], 
       default: "user"
     },
     googleId: {
       type: String
+    },
+    aiSettings: {
+      modelPreference: { 
+        type: String, 
+        default: "Gemini 2.5 Flash" 
+      },
+      analysisDepth: { 
+        type: String, 
+        default: "Comprehensive" 
+      },
+      simulationMode: { 
+        type: Boolean, 
+        default: false 
+      }
     }
   },
   { timestamps: true }
