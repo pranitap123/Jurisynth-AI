@@ -913,6 +913,7 @@
     "wait-on": "^9.0.3",
     "walker": "^1.0.8",
     "watchpack": "^2.4.4",
+    "wavesurfer.js": "^7.12.2",
     "wbuf": "^1.7.3",
     "web-streams-polyfill": "^3.3.3",
     "web-vitals": "^2.1.4",

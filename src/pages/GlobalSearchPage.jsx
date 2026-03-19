@@ -1,130 +1,124 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { FaSearch, FaFilePdf, FaMicrophoneAlt } from 'react-icons/fa';
-
-const mockSearchResults = [
-  {
-    id: 1,
-    type: 'document',
-    caseName: 'ABC v. XYZ Corp',
-    caseId: '2025-081',
-    source: 'Doc-001.pdf (Original Contract)',
-    snippet: '...agreed-upon date (Oct 15, 2024). Plaintiff (ABC) alleges **breach of contract** and seeks damages...'
-  },
-  {
-    id: 2,
-    type: 'transcript',
-    caseName: 'State v. Michaels',
-    caseId: '2025-078',
-    source: 'Witness Testimony (A. Bell)',
-    snippet: '...counselor, the defendant did not sign the **breach of contract** paperwork until the following week...'
-  },
-  {
-    id: 3,
-    type: 'document',
-    caseName: 'Patel v. Global Imports',
-    caseId: '2025-075',
-    source: 'Doc-002.pdf (Email Correspondence)',
-    snippet: '...we must consider this a material **breach of contract** if the goods do not arrive by Friday...'
-  },
-];
+import React, { useState } from "react";
+import DashboardLayout from "../components/dashboard/DashboardLayout";
 
 function GlobalSearchPage() {
-  const [currentUser, setCurrentUser] = useState({ name: 'Guest', initials: 'G' });
-  const [query, setQuery] = useState('');
+
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
 
-  useEffect(() => {
-    const savedName = localStorage.getItem('loggedInUserName');
-    if (savedName) {
-      const initials = savedName.split(' ').map(n => n[0]).join('').toUpperCase();
-      setCurrentUser({ name: savedName, initials: initials });
+  const userName = localStorage.getItem("loggedInUserName") || "User";
+  const userInitials = userName.charAt(0).toUpperCase();
+
+  const handleSearch = async () => {
+    try {
+      const res = await fetch("http://localhost:5000/api/cases");
+      const data = await res.json();
+
+      if (Array.isArray(data)) {
+
+        const keyword = query.toLowerCase();
+
+        const filtered = data.filter((c) =>
+          c.title?.toLowerCase().includes(keyword) ||
+          c.caseNumber?.toLowerCase().includes(keyword) ||
+          c.description?.toLowerCase().includes(keyword) ||
+          c.status?.toLowerCase().includes(keyword) ||
+          c.priority?.toLowerCase().includes(keyword)
+        );
+
+        setResults(filtered);
+      }
+
+    } catch (error) {
+      console.log(error);
     }
-  }, []);
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (query.trim() === '') return;
-
-    console.log('Searching for:', query);
-    setIsSearching(true);
-
-    setTimeout(() => {
-      const filteredResults = mockSearchResults.filter(r => 
-        query.toLowerCase().includes('breach of contract')
-      );
-      setResults(filteredResults);
-      setIsSearching(false);
-    }, 1000);
-  };
-
-  const handleSuggestionClick = (suggestion) => {
-    setQuery(suggestion);
   };
 
   return (
-    <DashboardLayout userName={currentUser.name} userInitials={currentUser.initials}>
-      <div className="search-page-container">
-        
-        <form className="global-search-bar" onSubmit={handleSearch}>
-          <FaSearch className="search-icon-large" />
-          <input 
-            type="text" 
-            placeholder="Search across all cases, documents, and transcripts..."
+    <DashboardLayout userName={userName} userInitials={userInitials}>
+
+      <div style={{ padding: "30px" }}>
+
+        <h2>Global Search</h2>
+
+        <div style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "20px"
+        }}>
+          <input
+            type="text"
+            placeholder="Search anything..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            style={{
+              padding: "10px",
+              borderRadius: "6px",
+              border: "1px solid #333",
+              width: "300px"
+            }}
           />
-          <button type="submit" className="btn btn-primary" disabled={isSearching}>
-            {isSearching ? 'Searching...' : 'Search'}
-          </button>
-        </form>
 
-        <div className="search-suggestions">
-          <span>Try:</span>
-          <button onClick={() => handleSuggestionClick('"breach of contract"')}>
-            "breach of contract"
-          </button>
-          <button onClick={() => handleSuggestionClick('witness "J. Doe"')}>
-            witness "J. Doe"
-          </button>
-          <button onClick={() => handleSuggestionClick('Force Majeure')}>
-            Force Majeure
+          <button
+            onClick={handleSearch}
+            style={{
+              padding: "10px 20px",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer"
+            }}
+          >
+            Search
           </button>
         </div>
 
-        <div className="search-results-container">
-          {results.length > 0 && <h3>Found {results.length} results for "{query}"</h3>}
+        {results.length === 0 ? (
+          <p>No results found.</p>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th>Case Name</th>
+                <th>Case ID</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
 
-          <div className="search-results-list">
-            {results.map((result) => (
-              <div key={result.id} className="result-snippet-card">
-                <div className="result-icon">
-                  {result.type === 'document' ? <FaFilePdf /> : <FaMicrophoneAlt />}
-                </div>
-                <div className="result-content">
-                  <Link to={`/case/${result.caseId}`} className="result-title">
-                    Found in: <strong>{result.caseName}</strong>
-                  </Link>
-                  <span className="result-source">{result.source}</span>
-                  <p 
-                    className="result-snippet"
-                    dangerouslySetInnerHTML={{ __html: result.snippet }} 
-                  />
-                </div>
-              </div>
-            ))}
-            
-            {isSearching && <p className="loading-text">Searching...</p>}
-            
-            {!isSearching && results.length === 0 && query !== '' && (
-              <p className="loading-text">No results found for "{query}".</p>
-            )}
-          </div>
-        </div>
+            <tbody>
+              {results.map((c) => {
+                let p = (c.priority || "low").toLowerCase();
+
+                let color = "#ccc";
+                if (p === "high") color = "red";
+                else if (p === "medium") color = "yellow";
+                else if (p === "low") color = "green";
+
+                return (
+                  <tr key={c._id}>
+                    <td>{c.title}</td>
+                    <td>{c.caseNumber}</td>
+                    <td>{c.status}</td>
+                    <td>
+                      {c.createdAt
+                        ? new Date(c.createdAt).toLocaleDateString()
+                        : "N/A"}
+                    </td>
+                    <td style={{ color, fontWeight: "bold" }}>
+                      {p}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
 
       </div>
+
     </DashboardLayout>
   );
 }

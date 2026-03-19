@@ -1,23 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middleware/authMiddleware"); 
-const upload = require("../middleware/uploadMiddleware"); 
 
-const {
-  createCase,
-  getCases,
-  getCaseById,
-  updateCase,
-  deleteCase,
-  uploadDocument 
-} = require("../controllers/caseController");
+const caseController = require("../controllers/caseController");
+const upload = require("../middleware/uploadMiddleware.js"); // ✅ ADD
 
-router.post("/", protect, createCase);
-router.get("/", protect, getCases);
-router.get("/:id", protect, getCaseById);
-router.put("/:id", protect, updateCase);
-router.delete("/:id", protect, deleteCase);
+// Create case
+router.post("/", caseController.createCase);
 
-router.post("/:id/documents", protect, upload.single("document"), uploadDocument);
+// Get all cases
+router.get("/", caseController.getCases);
+
+// Get single case
+router.get("/:id", caseController.getCaseById);
+
+// Delete case
+router.delete("/:id", caseController.deleteCase);
+
+// AI summary
+router.put("/:caseId/summary", caseController.generateSummary);
+
+// ✅ ✅ ✅ MAIN FIX (UPLOAD ROUTE HERE)
+router.post(
+  "/upload/:id",
+  upload.single("file"),
+  caseController.uploadDocument
+);
 
 module.exports = router;

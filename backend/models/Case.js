@@ -2,49 +2,56 @@ const mongoose = require("mongoose");
 
 const caseSchema = new mongoose.Schema(
   {
-    title: { 
-      type: String, 
-      required: true,
-      trim: true 
-    },
-    caseNumber: { 
-      type: String, 
-      required: true, 
-      unique: true, 
-      trim: true    
-    },
-    description: { 
-      type: String 
-    },
+    title: { type: String, required: true },
+    caseNumber: { type: String, required: true, unique: true },
+    description: String,
+
     status: {
       type: String,
-      enum: ["processing", "ready", "closed"],
-      default: "processing"
+      default: "processing",
     },
-    aiSummary: {
+
+    priority: {
       type: String,
-      default: ""
+      enum: ["high", "medium", "low"],
+      default: "medium",
     },
-    keyPoints: {
-      type: [String],
-      default: []
-    },
+
+    // ✅ ADD THIS (FIX)
     documents: [
       {
-        filename: String,
-        path: String,
-        uploadedAt: { type: Date, default: Date.now }
-      }
+        fileName: String,
+        fileUrl: String,
+        uploadedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
     ],
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true
-    }
+
+    timeline: [
+      {
+        type: { type: String },
+        message: String,
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    stageHistory: [],
+
+    tasks: [
+      {
+        text: String,
+        status: String,
+      },
+    ],
+
+    user: mongoose.Schema.Types.ObjectId,
   },
   { timestamps: true }
 );
-
-caseSchema.index({ title: 'text', caseNumber: 'text' });
 
 module.exports = mongoose.model("Case", caseSchema);

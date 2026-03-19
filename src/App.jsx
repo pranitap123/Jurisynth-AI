@@ -3,6 +3,7 @@ import './styles.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
+
 import HomePage from './pages/HomePage';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './components/dashboard/Dashboard';
@@ -10,6 +11,12 @@ import CaseViewPage from './pages/CaseViewPage';
 import AllCasesPage from './pages/AllCasesPage';
 import GlobalSearchPage from './pages/GlobalSearchPage';
 import SettingsPage from './pages/SettingsPage'; 
+import TranscribeAudio from "./pages/TranscribeAudio";
+import CreateCasePage from "./pages/CreateCasePage";
+import CrimeInfoPage from "./pages/CrimeInfoPage";
+import UploadPage from "./pages/UploadFile";
+import CaseDetailsPage from "./pages/CaseDetailsPage";
+
 
 function App() {
   const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
@@ -25,6 +32,13 @@ function App() {
           <Route path="/all-cases" element={<AllCasesPage />} /> 
           <Route path="/search" element={<GlobalSearchPage />} /> 
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/transcribe" element={<TranscribeAudio />} />
+          <Route path="/new-case" element={<CreateCasePage />} />
+          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/case/:id" element={<CaseDetailsPage />} />
+          
+<Route path="/crime-info" element={<CrimeInfoPage />} />
+
           <Route path="/forgot-password" element={<div>Forgot Password Page</div>} />
         </Routes>
       </BrowserRouter>

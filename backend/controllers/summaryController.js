@@ -95,6 +95,11 @@ exports.generateSummary = async (req, res) => {
     caseData.aiSummary = aiOutput.summary;
     caseData.keyPoints = aiOutput.keyPoints;
     caseData.status = "ready"; 
+    caseData.timeline.push({
+  title: "AI Analysis Generated",
+  description: "AI analyzed uploaded evidence",
+  date: new Date()
+});
     await caseData.save();
 
     console.log(">>> Pipeline Complete. DB Updated.");

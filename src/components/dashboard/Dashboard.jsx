@@ -3,39 +3,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import DashboardLayout from './DashboardLayout';
 import { 
   FaPlus, FaFileUpload, FaMicrophoneAlt, 
-  FaCheckCircle, FaExclamationTriangle, FaArchive, FaTimes 
+  FaCheckCircle, FaExclamationTriangle, FaArchive 
 } from 'react-icons/fa';
 import { MdOutlineSummarize } from 'react-icons/md';
 
-const attentionItems = [
-  {
-    id: 1,
-    type: 'contradiction',
-    icon: <FaExclamationTriangle />,
-    text: "Contradiction found in 'ABC v. XYZ Corp'",
-    actionText: 'Review Now',
-    link: '/case/2025-081'
-  },
-  {
-    id: 2,
-    type: 'summary',
-    icon: <FaExclamationTriangle />,
-    text: "Summary ready for 'Johnson Property Dispute'",
-    actionText: 'View Summary',
-    link: '/case/2025-079'
-  }
-];
-
 function Dashboard() {
+
   const [currentUser, setCurrentUser] = useState({ name: 'Guest', initials: 'G' });
   const [cases, setCases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState(null);
+
   const [formData, setFormData] = useState({
     title: '',
     caseNumber: '',
@@ -43,61 +27,83 @@ function Dashboard() {
   });
 
   useEffect(() => {
-    const savedName = localStorage.getItem('loggedInUserName');
-    const token = localStorage.getItem('token');
 
-    if (!token) {
+    const savedName = localStorage.getItem('loggedInUserName');
+
+    if (!savedName) {
       navigate('/auth');
       return;
     }
 
-    if (savedName) {
-      const initials = savedName.split(' ').map(n => n[0]).join('').toUpperCase();
-      setCurrentUser({ name: savedName, initials: initials });
-    }
+    const initials = savedName
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase();
+
+    setCurrentUser({
+      name: savedName,
+      initials
+    });
 
     const fetchCases = async () => {
+
       try {
+
         const response = await fetch('http://localhost:5000/api/cases', {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch cases from server');
+          throw new Error(data.message || 'Failed to fetch cases');
         }
 
         setCases(data);
+
       } catch (err) {
+
         setError(err.message);
+
       } finally {
+
         setIsLoading(false);
+
       }
     };
 
     fetchCases();
+
   }, [navigate]);
 
+
+
   const handleCreateCase = async (e) => {
+
     e.preventDefault();
+
     setModalError(null);
     setIsSubmitting(true);
 
-    const token = localStorage.getItem('token');
-
     try {
+
       const response = await fetch('http://localhost:5000/api/cases', {
+
         method: 'POST',
+
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+
+        credentials: 'include',
+
         body: JSON.stringify(formData)
+
       });
 
       const data = await response.json();
@@ -107,196 +113,370 @@ function Dashboard() {
       }
 
       setCases([data, ...cases]);
-      
+
       setIsModalOpen(false);
-      setFormData({ title: '', caseNumber: '', description: '' });
+
+      setFormData({
+        title: '',
+        caseNumber: '',
+        description: ''
+      });
 
     } catch (err) {
+
       setModalError(err.message);
+
     } finally {
+
       setIsSubmitting(false);
+
     }
   };
 
-  const getStatusDisplay = (status) => {
-    switch(status) {
+
+
+  // NEW: stage-based display
+  const getStageDisplay = (stage) => {
+
+    switch (stage) {
+
+      case 'created':
+        return { text: 'Created', icon: <MdOutlineSummarize />, cssClass: 'processing' };
+
+      case 'documents_uploaded':
+        return { text: 'Docs Uploaded', icon: <FaFileUpload />, cssClass: 'processing' };
+
+      case 'under_review':
+        return { text: 'Under Review', icon: <MdOutlineSummarize />, cssClass: 'processing' };
+
+      case 'ai_processed':
+        return { text: 'AI Processed', icon: <FaCheckCircle />, cssClass: 'ready' };
+
       case 'ready':
         return { text: 'Ready', icon: <FaCheckCircle />, cssClass: 'ready' };
+
       case 'closed':
         return { text: 'Closed', icon: <FaArchive />, cssClass: 'closed' };
-      case 'processing':
+
       default:
         return { text: 'Processing', icon: <MdOutlineSummarize />, cssClass: 'processing' };
     }
   };
 
+
+  // NEW: sort by latest activity
+  const sortedCases = [...cases].sort((a, b) => {
+    const aTime = a.timeline?.length
+      ? new Date(a.timeline[a.timeline.length - 1].createdAt)
+      : new Date(a.createdAt);
+
+    const bTime = b.timeline?.length
+      ? new Date(b.timeline[b.timeline.length - 1].createdAt)
+      : new Date(b.createdAt);
+
+    return bTime - aTime;
+  });
+
+
+  // NEW: dynamic attention items
+  const attentionItems = sortedCases
+    .filter(c => c.stage === "documents_uploaded" || c.stage === "ai_processed")
+    .slice(0, 2)
+    .map((c, index) => ({
+      id: index,
+      type: 'warning',
+      icon: <FaExclamationTriangle />,
+      text:
+        c.stage === "documents_uploaded"
+          ? `Documents uploaded for "${c.title}"`
+          : `AI summary ready for "${c.title}"`,
+      actionText: 'View Case',
+      link: `/case/${c._id}`
+    }));
+
+
+
   return (
-    <DashboardLayout userName={currentUser.name} userInitials={currentUser.initials}>
+
+    <DashboardLayout
+      userName={currentUser.name}
+      userInitials={currentUser.initials}
+    >
+
       <div className="dashboard-header">
         <h1>Welcome back, {currentUser.name}!</h1>
       </div>
-      
-      <section className="dashboard-section">
-        <h2>Quick Actions</h2>
-        <div className="quick-actions-grid">
-          <button className="action-card" onClick={() => setIsModalOpen(true)}>
-            <span className="action-icon"><FaPlus /></span>
-            Create New Case
-          </button>
-          <button className="action-card">
-            <span className="action-icon"><FaFileUpload /></span>
-            Upload Document
-          </button>
-          <button className="action-card">
-            <span className="action-icon"><FaMicrophoneAlt /></span>
-            Transcribe Audio
-          </button>
-        </div>
-      </section>
+
+
 
       <section className="dashboard-section">
+
+        <h2>Quick Actions</h2>
+
+        <div className="quick-actions-grid">
+
+          <button
+            className="action-card"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <span className="action-icon">
+              <FaPlus />
+            </span>
+            Create New Case
+          </button>
+
+          <button
+            className="action-card"
+            onClick={() => navigate("/upload")}
+          >
+            <span className="action-icon">
+              <FaFileUpload />
+            </span>
+            Upload Document
+          </button>
+
+          <button
+            className="action-card"
+            onClick={() => navigate("/transcribe")}
+          >
+            <span className="action-icon">
+              <FaMicrophoneAlt />
+            </span>
+            Transcribe Audio
+          </button>
+
+        </div>
+
+      </section>
+
+
+
+      <section className="dashboard-section">
+
         <h2>Recent Cases</h2>
-        
-        {isLoading && <p style={{ color: 'var(--text-secondary)' }}>Loading your cases...</p>}
-        
+
+        {isLoading && (
+          <p style={{ color: 'var(--text-secondary)' }}>
+            Loading your cases...
+          </p>
+        )}
+
         {error && (
-          <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '15px', borderRadius: '8px', marginBottom: '15px' }}>
+          <div style={{
+            color: '#F87171',
+            background: 'rgba(248,113,113,0.1)',
+            padding: '15px',
+            borderRadius: '8px',
+            marginBottom: '15px'
+          }}>
             <strong>Error:</strong> {error}
           </div>
         )}
 
         {!isLoading && !error && cases.length === 0 && (
-          <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>You don't have any cases yet.</p>
-            <button className="btn btn-primary btn-small" onClick={() => setIsModalOpen(true)}>
+
+          <div style={{
+            padding: '2rem',
+            textAlign: 'center',
+            background: 'var(--bg-secondary)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-color)'
+          }}>
+
+            <p style={{
+              color: 'var(--text-secondary)',
+              marginBottom: '1rem'
+            }}>
+              You don't have any cases yet.
+            </p>
+
+            <button
+              className="btn btn-primary btn-small"
+              onClick={() => setIsModalOpen(true)}
+            >
               Create Your First Case
             </button>
+
           </div>
+
         )}
 
         {!isLoading && !error && cases.length > 0 && (
+
           <div className="case-grid">
-            {cases.slice(0, 3).map((caseItem) => {
-              const statusDisplay = getStatusDisplay(caseItem.status);
-              
+
+            {sortedCases.slice(0, 3).map((caseItem) => {
+
+              const statusDisplay = getStageDisplay(caseItem.stage);
+
+              const latestEvent = caseItem.timeline?.length
+                ? caseItem.timeline[caseItem.timeline.length - 1]
+                : null;
+
               return (
+
                 <div className="case-card" key={caseItem._id}>
+
                   <h4>{caseItem.title}</h4>
+
                   <p>Case #{caseItem.caseNumber}</p>
-                  
+
                   <span className={`case-status ${statusDisplay.cssClass}`}>
                     {statusDisplay.icon} {statusDisplay.text}
                   </span>
-                  
+
                   <p className="case-activity">
-                    Created: {new Date(caseItem.createdAt).toLocaleDateString()}
+                    {latestEvent
+                      ? latestEvent.message
+                      : `Created: ${new Date(caseItem.createdAt).toLocaleDateString()}`}
                   </p>
-                  <Link to={`/case/${caseItem._id}`} className="btn btn-secondary btn-small">
-                    View Details
-                  </Link>
+
+                  <p style={{ fontSize: "12px", color: "gray" }}>
+                    {latestEvent &&
+                      new Date(latestEvent.createdAt).toLocaleString()}
+                  </p>
+
+                  <Link
+  to={`/case/${caseItem._id}`}
+  className="btn btn-secondary btn-small"
+>
+  View Details
+</Link>
+
                 </div>
+
               );
+
             })}
+
           </div>
+
         )}
+
       </section>
 
+
+
       <section className="dashboard-section">
+
         <h2>Attention Required</h2>
+
         <div className="attention-widget">
+
+          {attentionItems.length === 0 && (
+            <p style={{ color: "gray" }}>No immediate actions required</p>
+          )}
+
           {attentionItems.map(item => (
-            <div key={item.id} className={`attention-item ${item.type}`}>
+
+            <div
+              key={item.id}
+              className={`attention-item ${item.type}`}
+            >
+
               <div className="attention-icon">
                 {item.icon}
               </div>
+
               <div className="attention-text">
                 {item.text}
               </div>
-              <Link to={item.link} className="btn btn-secondary btn-small">
+
+              <Link
+                to={item.link}
+                className="btn btn-secondary btn-small"
+              >
                 {item.actionText}
               </Link>
+
             </div>
+
           ))}
+
         </div>
+
       </section>
 
+
+
       {isModalOpen && (
+
         <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 9999
         }}>
+
           <div style={{
-            background: 'var(--bg-secondary)', padding: '2rem', borderRadius: '12px',
-            width: '100%', maxWidth: '500px', border: '1px solid var(--border-color)',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative'
+            background: "#1e293b",
+            padding: "30px",
+            borderRadius: "10px",
+            width: "400px"
           }}>
-            
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}
-            >
-              <FaTimes />
-            </button>
 
-            <h2 style={{ color: 'var(--text-primary)', marginBottom: '1.5rem', marginTop: 0 }}>Create New Case</h2>
-
-            {modalError && (
-              <div style={{ color: '#F87171', background: 'rgba(248, 113, 113, 0.1)', padding: '10px', borderRadius: '8px', marginBottom: '15px', fontSize: '0.9rem' }}>
-                {modalError}
-              </div>
-            )}
+            <h2>Create New Case</h2>
 
             <form onSubmit={handleCreateCase}>
-              <div className="form-group">
-                <label>Case Title / Name</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Smith v. State" 
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  required 
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: '1rem' }}
-                />
-              </div>
 
-              <div className="form-group">
-                <label>Case Number</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., 2025-CV-0104" 
-                  value={formData.caseNumber}
-                  onChange={(e) => setFormData({...formData, caseNumber: e.target.value})}
-                  required 
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: '1rem' }}
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Case Title"
+                value={formData.title}
+                onChange={(e)=>setFormData({...formData,title:e.target.value})}
+                style={{width:"100%",padding:"10px",marginBottom:"10px"}}
+              />
 
-              <div className="form-group">
-                <label>Description (Optional)</label>
-                <textarea 
-                  rows="3"
-                  placeholder="Brief summary or notes about this case..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: '1.5rem', resize: 'vertical' }}
-                ></textarea>
-              </div>
+              <input
+                type="text"
+                placeholder="Case Number"
+                value={formData.caseNumber}
+                onChange={(e)=>setFormData({...formData,caseNumber:e.target.value})}
+                style={{width:"100%",padding:"10px",marginBottom:"10px"}}
+              />
 
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
+              <textarea
+                placeholder="Description"
+                value={formData.description}
+                onChange={(e)=>setFormData({...formData,description:e.target.value})}
+                style={{width:"100%",padding:"10px",marginBottom:"10px"}}
+              />
+
+              <div style={{display:"flex",gap:"10px"}}>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                >
+                  Create
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={()=>setIsModalOpen(false)}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Creating...' : 'Create Case'}
-                </button>
+
               </div>
+
             </form>
+
           </div>
+
         </div>
+
       )}
 
     </DashboardLayout>
+
   );
 }
 

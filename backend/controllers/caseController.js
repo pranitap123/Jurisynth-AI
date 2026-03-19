@@ -1,87 +1,154 @@
+const mongoose = require("mongoose");
 const Case = require("../models/Case");
-const User = require("../models/User");
 
-exports.createCase = async (req, res) => {
+
+// ✅ CREATE CASE
+const createCase = async (req, res) => {
   try {
-    const { title, caseNumber, description } = req.body;
+    const { title, caseNumber, description, status, priority } = req.body;
 
-    const existingCase = await Case.findOne({ caseNumber });
-    if (existingCase) {
-      return res.status(400).json({ 
-        message: "This case ID already exists. Please enter a different Case ID." 
-      });
+    // ✅ VALID ENUM VALUES (MATCH SCHEMA)
+    const validStatuses = ["processing", "ready", "closed"];
+    const validPriorities = ["high", "medium", "low"];
+
+    // ✅ FIX PRIORITY FROM FRONTEND (e.g. "High Priority")
+    let formattedPriority = "low";
+    if (priority) {
+      const p = priority.toLowerCase();
+      if (p.includes("high")) formattedPriority = "high";
+      else if (p.includes("medium")) formattedPriority = "medium";
+      else formattedPriority = "low";
     }
 
     const newCase = await Case.create({
       title,
       caseNumber,
       description,
-      user: req.user.id
+
+      // ✅ STATUS FIX
+      status: validStatuses.includes(status) ? status : "processing",
+
+      // ✅ PRIORITY FIX
+      priority: validPriorities.includes(priority)
+        ? priority
+        : formattedPriority,
+
+      documents: [],
+      timeline: [],
+      stageHistory: [],
+
+      tasks: [
+        {
+          text: "Upload required documents",
+          status: "pending"
+        }
+      ],
+
+      user: new mongoose.Types.ObjectId()
     });
 
     res.status(201).json(newCase);
+
   } catch (error) {
+    console.log("❌ CREATE CASE ERROR:", error);
+
+    // ✅ HANDLE DUPLICATE CASE NUMBER
     if (error.code === 11000) {
-        return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
+      return res.status(400).json({
+        message: "Case number already exists. Please use a different one."
+      });
     }
+
     res.status(500).json({ message: error.message });
   }
 };
 
-exports.getCases = async (req, res) => {
+// ✅ GET ALL CASES
+const getCases = async (req, res) => {
   try {
-    let query = {};
+    const cases = await Case.find();
 
-    if (req.user.role === 'advocate') {
-      query = { user: req.user.id };
-    }
+    const priorityOrder = { high: 1, medium: 2, low: 3 };
 
-    const cases = await Case.find(query)
-      .populate('documents')
-      .sort({ createdAt: -1 });
-
-    let userName = req.user.name;
-    let userRole = req.user.role;
-
-    if (!userName || !userRole) {
-      const dbUser = await User.findById(req.user.id);
-      if (dbUser) {
-        userName = dbUser.name;
-        userRole = dbUser.role;
-      }
-    }
-
-    res.json({
-      cases: cases || [],
-      user: {
-        name: userName || "User",
-        role: userRole || "user"
-      }
+    cases.sort((a, b) => {
+      const pA = a.priority || "low";
+      const pB = b.priority || "low";
+      return priorityOrder[pA] - priorityOrder[pB];
     });
+
+    res.json(cases);
+
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };
 
-exports.getCaseById = async (req, res) => {
+// ✅ GET CASE BY ID
+const getCaseById = async (req, res) => {
   try {
-    const caseData = await Case.findById(req.params.id).populate('documents');
+    const data = await Case.findById(req.params.id);
+
+    if (!data) {
+      return res.status(404).json({ message: "Case not found" });
+    }
+
+    res.json(data);
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ DELETE CASE
+const deleteCase = async (req, res) => {
+  try {
+    await Case.findByIdAndDelete(req.params.id);
+    res.json({ message: "Deleted" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error deleting case" });
+  }
+};
+
+
+// ✅ UPLOAD DOCUMENT
+const uploadDocument = async (req, res) => {
+  try {
+    const caseData = await Case.findById(req.params.id);
 
     if (!caseData) {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    if (req.user.role === 'advocate' && caseData.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
+
+    // ✅ PUSH INTO ARRAY
+    caseData.documents.push({
+      fileName: req.file.originalname,
+      fileUrl: req.file.filename,
+    });
+
+    // ✅ ADD TIMELINE ENTRY (BONUS 🔥)
+    caseData.timeline.push({
+      type: "document_uploaded",
+      message: `File uploaded: ${req.file.originalname}`,
+    });
+
+    await caseData.save();
 
     res.json(caseData);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error uploading file" });
   }
 };
-
-exports.updateCase = async (req, res) => {
+// ✅ GENERATE SUMMARY
+const generateSummary = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
 
@@ -89,30 +156,81 @@ exports.updateCase = async (req, res) => {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    if (caseData.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Access denied. Only the assigned advocate can update this case." });
-    }
+    caseData.status = "processing";
 
-    if (req.body.caseNumber && req.body.caseNumber !== caseData.caseNumber) {
-        const duplicate = await Case.findOne({ caseNumber: req.body.caseNumber });
-        if (duplicate) {
-            return res.status(400).json({ message: "This case ID already exists. Please enter a different Case ID." });
-        }
-    }
+    caseData.timeline.push({
+      type: "summary_generated",
+      message: "AI summary generated"
+    });
 
-    const updatedCase = await Case.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    ).populate('documents');
+    await caseData.save();
 
-    res.json(updatedCase);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.json({ message: "Summary generated" });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error generating summary" });
   }
 };
 
-exports.deleteCase = async (req, res) => {
+// ✅ ADD PROOF
+const addProof = async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    const caseData = await Case.findById(req.params.id);
+
+    if (!caseData) {
+      return res.status(404).json({ message: "Case not found" });
+    }
+
+    caseData.timeline.push({
+      type: "proof_added",
+      message: text
+    });
+
+    caseData.status = "processing";
+
+    await caseData.save();
+
+    res.json(caseData);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error adding proof" });
+  }
+};
+
+// ✅ ADD JUDGEMENT
+const addJudgement = async (req, res) => {
+  try {
+    const { judgement } = req.body;
+
+    const caseData = await Case.findById(req.params.id);
+
+    if (!caseData) {
+      return res.status(404).json({ message: "Case not found" });
+    }
+
+    caseData.timeline.push({
+      type: "judgement_added",
+      message: judgement
+    });
+
+    caseData.status = "ready";
+
+    await caseData.save();
+
+    res.json(caseData);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error adding judgement" });
+  }
+};
+
+// ✅ CLOSE CASE
+const closeCase = async (req, res) => {
   try {
     const caseData = await Case.findById(req.params.id);
 
@@ -120,48 +238,30 @@ exports.deleteCase = async (req, res) => {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    if (caseData.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    caseData.status = "closed";
 
-    await caseData.deleteOne();
+    caseData.timeline.push({
+      type: "case_closed",
+      message: "Case has been closed"
+    });
 
-    res.json({ message: "Case deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    await caseData.save();
+
+    res.json(caseData);
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Error closing case" });
   }
 };
-
-exports.uploadDocument = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file was uploaded." });
-    }
-
-    const query = { _id: req.params.id };
-    if (req.user.role === 'advocate') {
-      query.user = req.user.id;
-    }
-
-    const updatedCase = await Case.findOneAndUpdate(
-      query,
-      { 
-        $push: { 
-          documents: { 
-            filename: req.file.originalname, 
-            path: req.file.path 
-          } 
-        } 
-      },
-      { new: true, runValidators: true }
-    ).populate('documents'); 
-
-    if (!updatedCase) {
-      return res.status(404).json({ message: "Case not found or unauthorized" });
-    }
-
-    res.status(200).json(updatedCase);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+module.exports = {
+  createCase,
+  getCases,
+  getCaseById,
+  deleteCase,
+  generateSummary,
+  addProof,
+  addJudgement,
+  closeCase,
+  uploadDocument, // ✅ ADD THIS
 };

@@ -1,33 +1,42 @@
-const Document = require("../models/Document");
 const Case = require("../models/Case");
 
 exports.uploadDocument = async (req, res) => {
   try {
-    const { caseId } = req.body;
+    const { caseId } = req.params;
 
-    const caseData = await Case.findById(caseId);
+    const caseData = await Case.findOne({
+      $or: [
+        { _id: caseId.match(/^[0-9a-fA-F]{24}$/) ? caseId : null },
+        { caseNumber: caseId }
+      ]
+    });
 
     if (!caseData) {
       return res.status(404).json({ message: "Case not found" });
     }
 
-    if (caseData.user.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Access denied" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const newDocument = await Document.create({
-      case: caseId,
-      fileName: req.file.filename,
-      filePath: req.file.path,
-      uploadedBy: req.user.id
+    caseData.documents.push({
+      filename: req.file.originalname,
+      path: req.file.path
     });
 
-    await Case.findByIdAndUpdate(caseId, {
-      $push: { documents: newDocument._id }
+    caseData.timeline.push({
+      type: "document_uploaded",
+      message: `Uploaded: ${req.file.originalname}`
     });
 
-    res.status(201).json(newDocument);
+    caseData.stage = "documents_uploaded";
+
+    await caseData.save();
+
+    res.status(200).json({ message: "File uploaded successfully" });
+
   } catch (error) {
+    console.log(error);
     res.status(500).json({ message: error.message });
   }
 };

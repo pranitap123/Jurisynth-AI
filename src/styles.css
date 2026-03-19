@@ -2967,3 +2967,64 @@ table td .btn-small:hover {
   border-radius: 6px;
   cursor: pointer;
 }
+
+.new-case-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: all 0.2s ease;
+}
+
+.new-case-btn:hover {
+  background: linear-gradient(90deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+}
+
+.new-case-btn:active {
+  transform: scale(0.98);
+}
+
+
+/* Priority Colors */
+
+.priority-high {
+  color: #ff4d4f;
+  font-weight: 600;
+}
+
+.priority-medium {
+  color: #f0b429;
+  font-weight: 600;
+}
+
+.priority-low {
+  color: #2ecc71;
+  font-weight: 600;
+}
+.timeline {
+  border-left: 3px solid #3b82f6;
+  margin-top: 15px;
+  padding-left: 15px;
+}
+
+.timeline-item {
+  margin-bottom: 15px;
+}
+
+.timeline-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.timeline-content {
+  background: #111827;
+  padding: 10px;
+  border-radius: 6px;
+}
