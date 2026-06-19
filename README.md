@@ -1,12 +1,18 @@
 # Jurisynth AI ⚖️🤖
 
-Jurisynth AI is a high-performance, full-stack SaaS platform engineered for secure legal case management, automated document analysis, and intelligent discovery tracking. Built with a robust Web2 architecture and integrated AI orchestration layers, it transforms unstructured legal records into verifiable, structured intelligence.
+> A high-performance, full-stack SaaS platform engineered for secure legal case management, automated document analysis, and intelligent discovery tracking. 
+
+Built with a robust, production-grade backend architecture and integrated AI orchestration layers, Jurisynth transforms unstructured legal records into verifiable, structured intelligence.
+
+[![Engine: Node.js](https://img.shields.io/badge/Engine-Node.js-000000.svg?style=flat-square)](https://nodejs.org/)
+[![Database: MongoDB](https://img.shields.io/badge/Database-MongoDB-000000.svg?style=flat-square)](https://www.mongodb.com/)
+[![Security: Zod](https://img.shields.io/badge/Security-Zod-000000.svg?style=flat-square)](https://zod.dev/)
 
 ---
 
 ## 🏗️ System Architecture
 
-Jurisynth utilizes an asynchronous data pipeline to ingest, validate, parse, and analyze sensitive legal files without blocking user workflows.
+Jurisynth utilizes an asynchronous data pipeline to ingest, validate, parse, and analyze sensitive legal files without blocking main thread user workflows.
 
 ```mermaid
 graph TD
@@ -20,52 +26,69 @@ graph TD
     Engine -->|Response Payload| User
 
     %% Styles
-    style User fill:#1d4ed8,stroke:#fff,stroke-width:2px,color:#fff
-    style DB fill:#15803d,stroke:#fff,stroke-width:2px,color:#fff
-    style AI fill:#6d28d9,stroke:#fff,stroke-width:2px,color:#fff
+    style User fill:#000000,stroke:#fff,stroke-width:1px,color:#fff
+    style DB fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+    style AI fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+    style API fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+    style Zod fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+    style Auth fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+    style Engine fill:#111111,stroke:#333,stroke-width:1px,color:#fff
+
 🛡️ The Security Moat (Handling Sensitive Legal Data)
-Isolated Sessions: Stateless user session management powered by JWT to enforce multi-tenant isolation.
+Isolated Sessions: Stateless user session management powered by cryptographically signed JWTs to enforce strict multi-tenant isolation.
 
-Input Sanitization: Strict Zod schema validation matching incoming payloads against exact expected models to eliminate injection and malformed structural threats.
+Input Sanitization: A rigid validation firewall powered by Zod. Every incoming payload is validated against exact expected models at the API perimeter to eliminate type-injection and malformed structural vulnerabilities.
 
-Asynchronous Execution: Complex non-blocking operations handled via robust JavaScript Async/Await patterns to ensure zero network-thread blockages.
+Asynchronous Concurrency: Complex, high-overhead processing routines are completely isolated using native JavaScript non-blocking event loops, ensuring zero network-thread starvation during deep file parsing.
 
 🛠️ Technology Stack
-Frontend Core: React.js / Next.js
+Frontend Core: React.js / Next.js (App Router layout framework)
 
-Backend Architecture: Node.js (Express)
+Backend Architecture: Node.js / Express runtime environments
 
-Database Engine: MongoDB with Mongoose ODM
+Database Engine: MongoDB with Mongoose object-data modeling
 
-Validation Firewall: Zod
+Validation Firewall: Zod schema-driven validation
 
-AI/NLP Processing: Advanced Text Extraction & Semantic Analysis Modules
+AI/NLP Processing: Proprietary custom text extraction & semantic discovery modules
 
-📁 Repository Layout
+📂 Repository Layout
+
 jurisynth-platform/
-├── controllers/    # Request handlers & response formatters
-├── middleware/     # Secure Auth guards & input sanitizers
-├── models/         # MongoDB schemas & interface definitions
-├── routes/         # Domain-specific routing layers
-├── services/       # AI orchestration & document analysis pipelines
-├── utils/          # Token utilities & structured loggers
-├── app.ts          # Core application configuration
-└── server.ts       # Service listener & database connection
-🚀 Getting Started
+├── controllers/    # Request handlers & HTTP response lifecycle formatters
+├── middleware/     # Secure authorization guards & input validation firewalls
+├── models/         # MongoDB schemas & interface data models
+├── routes/         # Domain-specific routing and parameter separation layers
+├── services/       # Core business logic: AI orchestration & analysis pipelines
+├── utils/          # JWT token utilities, crypto helpers, & structured loggers
+├── app.ts          # Express framework and core configuration middleware
+└── server.ts       # Database listener connections & service runtime bootloader
+
+⚙️ Engineering Environment Setup
+Clone the core legal repository:
+
 Bash
-# 1. Clone the legal core repository
 git clone [https://github.com/pranitap123/jurisynth-platform.git](https://github.com/pranitap123/jurisynth-platform.git)
+cd jurisynth-platform
+Install exact dependency lockfile specifications:
 
-# 2. Pull all production and environment dependencies
+Bash
 npm install
+Configure system environment flags (.env):
 
-# 3. Spin up the local runtime engine
+Code snippet
+PORT=8080
+MONGO_URI=your_secure_mongodb_connection_string
+JWT_SECRET=your_cryptographic_signing_key
+Initialize local development runtime environment:
+
+Bash
 npm run dev
-📈 Roadmap
-[x] Basic Express Routing and MongoDB Architecture.
+Tracks & Active Roadmap
+[x] Baseline architecture, system routes, and core database mapping models.
 
-[ ] Implement robust Text Extraction algorithms.
+[ ] Implementation of high-throughput text extraction algorithms.
 
-[ ] Connect Document Vectorization for Semantic Search.
+[ ] Connection of document vectorization layers for deep semantic search.
 
-[ ] CI/CD configuration via GitHub Actions.
+[ ] Automation of staging deployment pipelines via GitHub Actions.
